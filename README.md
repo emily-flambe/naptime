@@ -17,13 +17,26 @@ FastAPI backend + React frontend deployed to Google Cloud Run.
 # Create project (or use existing)
 gcloud projects create YOUR_PROJECT_ID --set-as-default
 
-# Enable required APIs
+# IMPORTANT: Enable billing for your project
+# Check if you have billing accounts:
+gcloud billing accounts list
+
+# Link billing account to project (replace with your billing account ID):
+gcloud billing projects link YOUR_PROJECT_ID --billing-account=BILLING_ACCOUNT_ID
+
+# Or visit: https://console.cloud.google.com/billing to set up billing
+
+# Enable required APIs (requires billing to be enabled)
 gcloud services enable run.googleapis.com artifactregistry.googleapis.com cloudbuild.googleapis.com
 
 # Create Artifact Registry repository
 gcloud artifacts repositories create cloud-run-apps \
     --repository-format=docker \
-    --location=us-central1
+    --location=us-central1 \
+    --description="Docker repository for Cloud Run apps"
+
+# Configure Docker authentication for Artifact Registry
+gcloud auth configure-docker us-central1-docker.pkg.dev
 ```
 
 ### 2. GitHub Actions (CI/CD)

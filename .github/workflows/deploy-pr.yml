@@ -7,6 +7,7 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  SERVICE_NAME: oura-naptime
   REGION: us-central1
   ARTIFACT_REGISTRY_LOCATION: us-central1
   ARTIFACT_REGISTRY_REPO: cloud-run-apps
@@ -66,7 +67,7 @@ jobs:
 
       - name: Build and Push Docker image
         run: |
-          PREVIEW_NAME="hello-world-pr-${{ github.event.pull_request.number }}"
+          PREVIEW_NAME="${{ env.SERVICE_NAME }}-pr-${{ github.event.pull_request.number }}"
           IMAGE_URL="${{ env.ARTIFACT_REGISTRY_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${PREVIEW_NAME}"
           
           # Build with cache and proper platform
@@ -84,7 +85,7 @@ jobs:
       - name: Deploy to Cloud Run
         id: deploy
         run: |
-          PREVIEW_NAME="hello-world-pr-${{ github.event.pull_request.number }}"
+          PREVIEW_NAME="${{ env.SERVICE_NAME }}-pr-${{ github.event.pull_request.number }}"
           IMAGE_URL="${{ env.ARTIFACT_REGISTRY_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${PREVIEW_NAME}:${{ github.sha }}"
           
           gcloud run deploy ${PREVIEW_NAME} \
@@ -249,40 +250,7 @@ jobs:
             echo "⚠️ No service URL available for testing" >> $GITHUB_STEP_SUMMARY
           fi
 
-  # Fifth: Clean up preview on PR close
-  cleanup-preview:
-    name: Cleanup PR Preview
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request' && github.event.action == 'closed'
-    
-    permissions:
-      contents: read
-      id-token: write
-
-    steps:
-      - name: Setup Google Cloud Authentication
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Setup Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: ${{ env.PROJECT_ID }}
-
-      - name: Delete preview service
-        run: |
-          PREVIEW_NAME="hello-world-pr-${{ github.event.pull_request.number }}"
-          
-          gcloud run services delete ${PREVIEW_NAME} \
-            --platform managed \
-            --region ${{ env.REGION }} \
-            --project ${{ env.PROJECT_ID }} \
-            --quiet || echo "Service already deleted or doesn't exist"
-          
-          echo "🧹 Cleaned up preview environment: ${PREVIEW_NAME}" >> $GITHUB_STEP_SUMMARY
-
-  # Sixth: Final CI status check (required for PR merge)
+  # Fifth: Final CI status check (required for PR merge)
   ci-status:
     name: CI Status Check
     runs-on: ubuntu-latest
