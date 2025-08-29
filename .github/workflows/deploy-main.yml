@@ -6,7 +6,7 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  SERVICE_NAME: hello-world-app
+  SERVICE_NAME: oura-naptime
   REGION: us-central1
   ARTIFACT_REGISTRY_LOCATION: us-central1
   ARTIFACT_REGISTRY_REPO: cloud-run-apps
@@ -233,7 +233,7 @@ jobs:
           PR_NUMBER=$(echo "$COMMIT_MSG" | grep -oP "Merge pull request #\K\d+" || true)
           
           if [ -n "$PR_NUMBER" ]; then
-            PREVIEW_NAME="hello-world-pr-${PR_NUMBER}"
+            PREVIEW_NAME="oura-naptime-pr-${PR_NUMBER}"
             echo "📦 Found merged PR #${PR_NUMBER}, cleaning up preview: ${PREVIEW_NAME}"
             
             if gcloud run services delete ${PREVIEW_NAME} \
@@ -254,7 +254,7 @@ jobs:
             --platform managed \
             --region ${{ env.REGION }} \
             --project ${{ env.PROJECT_ID }} \
-            --format="value(metadata.name)" | grep "^hello-world-pr-" || true)
+            --format="value(metadata.name)" | grep "^oura-naptime-pr-" || true)
           
           if [ -n "$SERVICES" ]; then
             for SERVICE in $SERVICES; do

@@ -66,7 +66,7 @@ jobs:
 
       - name: Build and Push Docker image
         run: |
-          PREVIEW_NAME="hello-world-pr-${{ github.event.pull_request.number }}"
+          PREVIEW_NAME="oura-naptime-pr-${{ github.event.pull_request.number }}"
           IMAGE_URL="${{ env.ARTIFACT_REGISTRY_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${PREVIEW_NAME}"
           
           # Build with cache and proper platform
@@ -84,7 +84,7 @@ jobs:
       - name: Deploy to Cloud Run
         id: deploy
         run: |
-          PREVIEW_NAME="hello-world-pr-${{ github.event.pull_request.number }}"
+          PREVIEW_NAME="oura-naptime-pr-${{ github.event.pull_request.number }}"
           IMAGE_URL="${{ env.ARTIFACT_REGISTRY_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${PREVIEW_NAME}:${{ github.sha }}"
           
           gcloud run deploy ${PREVIEW_NAME} \
@@ -272,7 +272,7 @@ jobs:
 
       - name: Delete preview service
         run: |
-          PREVIEW_NAME="hello-world-pr-${{ github.event.pull_request.number }}"
+          PREVIEW_NAME="oura-naptime-pr-${{ github.event.pull_request.number }}"
           
           gcloud run services delete ${PREVIEW_NAME} \
             --platform managed \

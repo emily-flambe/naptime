@@ -7,7 +7,7 @@ export
 # Configuration (can be overridden by .env or command line)
 PROJECT_ID ?= $(or $(GCP_PROJECT_ID),your-project-id)
 REGION ?= $(or $(GCP_REGION),us-central1)
-SERVICE_NAME ?= $(or $(GCP_SERVICE_NAME),hello-world-app)
+SERVICE_NAME ?= $(or $(GCP_SERVICE_NAME),oura-naptime)
 ARTIFACT_REGISTRY_LOCATION ?= us-central1
 ARTIFACT_REGISTRY_REPO ?= cloud-run-apps
 IMAGE_NAME = $(ARTIFACT_REGISTRY_LOCATION)-docker.pkg.dev/$(PROJECT_ID)/$(ARTIFACT_REGISTRY_REPO)/$(SERVICE_NAME)
@@ -83,8 +83,8 @@ init: ## Interactive setup for environment configuration
 	@read -p "Enter your GCP Project ID (e.g., my-project-123): " project_id; \
 	read -p "Enter your GCP Region [us-central1]: " region; \
 	region=$${region:-us-central1}; \
-	read -p "Enter your service name [hello-world-app]: " service_name; \
-	service_name=$${service_name:-hello-world-app}; \
+	read -p "Enter your service name [oura-naptime]: " service_name; \
+	service_name=$${service_name:-oura-naptime}; \
 	read -p "Enter Artifact Registry location [us-central1]: " ar_location; \
 	ar_location=$${ar_location:-us-central1}; \
 	read -p "Enter Artifact Registry repository name [cloud-run-apps]: " ar_repo; \
