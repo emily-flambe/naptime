@@ -1,16 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import './App.css'
 
-interface ApiResponse {
-  message: string
-  backend?: string
-  frontend?: string
-}
-
 interface NapStatus {
   message: string
   shouldNap: boolean
   sleepHours?: string
+  sleepCategory?: string
+  napPriority?: string
   currentTime?: string
   recommendation?: string
   quality?: string
@@ -26,22 +22,10 @@ interface NapStatus {
   }
 }
 
-interface SleepHistory {
-  dateRange: string
-  processedData: Array<{
-    date: string
-    sleepHours: string
-    totalSleepDurationSeconds: number
-    quality: string
-  }>
-}
-
 function App() {
-  const [message, setMessage] = useState<string>('Loading...')
-  const [error, setError] = useState<string | null>(null)
   const [napStatus, setNapStatus] = useState<NapStatus | null>(null)
-  const [loadingNap, setLoadingNap] = useState(false)
-  const [sleepHistory, setSleepHistory] = useState<SleepHistory | null>(null)
+  const [loadingNap, setLoadingNap] = useState(true)  // Start with true for initial load
+  const [detailsExpanded, setDetailsExpanded] = useState(false)
 
   const getApiUrl = useCallback((endpoint: string) => {
     return import.meta.env.PROD 
@@ -54,7 +38,9 @@ function App() {
     try {
       const response = await fetch(getApiUrl('/api/nap-status'))
       const data: NapStatus = await response.json()
+      console.log('Nap status response:', data)  // Debug log
       setNapStatus(data)
+      setLoadingNap(false)  // Move this here to ensure it runs after setNapStatus
     } catch (err) {
       console.error('Failed to fetch nap status:', err)
       setNapStatus({
@@ -62,187 +48,124 @@ function App() {
         shouldNap: false,
         error: 'Connection error'
       })
-    } finally {
       setLoadingNap(false)
     }
   }, [getApiUrl])
 
-  const fetchSleepHistory = useCallback(async () => {
-    try {
-      const response = await fetch(getApiUrl('/api/debug/sleep'))
-      const data: SleepHistory = await response.json()
-      setSleepHistory(data)
-    } catch (err) {
-      console.error('Failed to fetch sleep history:', err)
-    }
-  }, [getApiUrl])
 
   useEffect(() => {
-    // Fetch hello message and nap status on component mount
-    const fetchInitialData = async () => {
-      try {
-        const response = await fetch(getApiUrl('/api/hello'))
-        const data: ApiResponse = await response.json()
-        setMessage(data.message)
-      } catch (err) {
-        console.error('Failed to fetch:', err)
-        setError('Failed to connect to backend')
-        setMessage('Hello from Frontend Only!')
-      }
-    }
-
-    fetchInitialData()
     fetchNapStatus()
-    fetchSleepHistory()
-  }, [getApiUrl, fetchNapStatus, fetchSleepHistory])
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchNapStatus, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [fetchNapStatus])
 
   return (
-    <div className="App">
-      <h1>Emily Needs A Nap</h1>
-      
-      <div className="card">
-        <h2>{message}</h2>
-        {error && (
-          <p style={{ color: 'orange', fontSize: '0.9em' }}>
-            Note: {error}
-          </p>
-        )}
-      </div>
-
-      {/* Nap Status */}
-      <div className="card">
-        <h3>Nap Status</h3>
-        {loadingNap ? (
-          <p>Loading nap status...</p>
-        ) : napStatus ? (
-          <div>
+    <div className="app">
+      <main className="nap-container">
+        {(loadingNap || !napStatus) ? (
+          <div className="loading">checking...</div>
+        ) : (
+          <>
             {napStatus.error ? (
-              <div>
-                <p style={{ color: 'red' }}>Error: {napStatus.error}</p>
-                <button 
-                  onClick={fetchNapStatus}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#007cba',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                    marginTop: '10px'
-                  }}
-                >
-                  Retry
+              <div className="error">
+                <div className="message">unable to check nap status</div>
+                <button onClick={fetchNapStatus} className="retry-btn">
+                  retry
                 </button>
               </div>
             ) : (
-              <div>
-                <h2 style={{ color: napStatus.shouldNap ? '#ff6b6b' : '#51cf66' }}>
+              <>
+                <h1 className={`nap-message ${napStatus.shouldNap ? 'needs-nap' : 'no-nap'}`}>
                   {napStatus.message}
-                </h2>
-                {napStatus.sleepHours && (
-                  <p>Last night's sleep: {napStatus.sleepHours} hours</p>
-                )}
-                {napStatus.sleepScore && (
-                  <p>Sleep score: {napStatus.sleepScore}/100</p>
-                )}
-                {napStatus.quality && (
-                  <p>Sleep quality: {napStatus.quality}</p>
-                )}
-                {napStatus.details && (
-                  <div style={{ fontSize: '0.9em', color: '#666', marginTop: '10px' }}>
-                    <p>Deep: {napStatus.details.deepSleepMinutes}min | 
-                       REM: {napStatus.details.remSleepMinutes}min | 
-                       Light: {napStatus.details.lightSleepMinutes}min</p>
-                    <p>Sleep efficiency: {napStatus.details.efficiency}%</p>
-                  </div>
-                )}
-                {napStatus.recommendation && (
-                  <p style={{ 
-                    backgroundColor: '#f0f0f0', 
-                    padding: '10px', 
-                    borderRadius: '5px',
-                    marginTop: '10px'
-                  }}>
-                    Recommendation: {napStatus.recommendation}
-                  </p>
-                )}
-                {napStatus.cached && (
-                  <p style={{ fontSize: '0.8em', color: '#666' }}>
-                    Cached result (refreshes every 5 minutes)
-                  </p>
-                )}
-                <p style={{ fontSize: '0.8em', color: '#666' }}>
-                  Current time: {napStatus.currentTime || new Date().toLocaleString()}
-                </p>
+                </h1>
+                
                 <button 
-                  onClick={fetchNapStatus}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#28a745',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '5px',
-                    cursor: 'pointer',
-                    marginTop: '10px',
-                    fontSize: '14px'
-                  }}
+                  className="details-toggle"
+                  onClick={() => setDetailsExpanded(!detailsExpanded)}
+                  aria-expanded={detailsExpanded}
                 >
-                  Refresh Status
+                  (details)
                 </button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <button 
-            onClick={fetchNapStatus}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#007cba',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer'
-            }}
-          >
-            Check Nap Status
-          </button>
-        )}
-      </div>
-
-      {/* Sleep History for Past 3 Days */}
-      {sleepHistory && sleepHistory.processedData && sleepHistory.processedData.length > 0 && (
-        <div className="card">
-          <h3>Recent Sleep History ({sleepHistory.dateRange})</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {sleepHistory.processedData.map((sleep, index) => (
-              <div key={index} style={{ 
-                backgroundColor: '#f8f9fa', 
-                padding: '10px', 
-                borderRadius: '5px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <span style={{ fontWeight: 'bold' }}>
-                  {new Date(sleep.date).toLocaleDateString()}
-                </span>
-                <div style={{ textAlign: 'right' }}>
-                  <div>{sleep.sleepHours} hours</div>
-                  <div style={{ fontSize: '0.8em', color: '#666' }}>
-                    Quality: {sleep.quality}
+                
+                {detailsExpanded && (
+                  <div className="details-panel">
+                    {napStatus.sleepHours && (
+                      <div className="detail-row sleep-summary">
+                        <span>Emily got <span className={`sleep-hours ${napStatus.sleepCategory || 'good'}`}>{napStatus.sleepHours}</span> hours of sleep last night.</span>
+                      </div>
+                    )}
+                    {napStatus.sleepScore && (
+                      <div className="detail-row">
+                        <span className="label">sleep score:</span>
+                        <span className="value">{napStatus.sleepScore}/100</span>
+                      </div>
+                    )}
+                    {napStatus.quality && (
+                      <div className="detail-row">
+                        <span className="label">quality:</span>
+                        <span className="value">{napStatus.quality}</span>
+                      </div>
+                    )}
+                    {napStatus.details && (
+                      <>
+                        {napStatus.details.efficiency && (
+                          <div className="detail-row">
+                            <span className="label">efficiency:</span>
+                            <span className="value">{napStatus.details.efficiency}%</span>
+                          </div>
+                        )}
+                        <div className="detail-row sleep-phases">
+                          <span className="label">phases:</span>
+                          <div className="sleep-bar">
+                            {(() => {
+                              const deep = napStatus.details.deepSleepMinutes || 0;
+                              const rem = napStatus.details.remSleepMinutes || 0;
+                              const light = napStatus.details.lightSleepMinutes || 0;
+                              const total = deep + rem + light;
+                              
+                              return total > 0 ? (
+                                <>
+                                  <div 
+                                    className="sleep-segment deep" 
+                                    style={{ width: `${(deep / total) * 100}%` }}
+                                    title={`Deep: ${deep}m`}
+                                  />
+                                  <div 
+                                    className="sleep-segment rem" 
+                                    style={{ width: `${(rem / total) * 100}%` }}
+                                    title={`REM: ${rem}m`}
+                                  />
+                                  <div 
+                                    className="sleep-segment light" 
+                                    style={{ width: `${(light / total) * 100}%` }}
+                                    title={`Light: ${light}m`}
+                                  />
+                                </>
+                              ) : null;
+                            })()}
+                          </div>
+                          <div className="sleep-legend">
+                            <span className="legend-item"><span className="legend-dot deep"></span>deep {napStatus.details.deepSleepMinutes || 0}m</span>
+                            <span className="legend-item"><span className="legend-dot rem"></span>rem {napStatus.details.remSleepMinutes || 0}m</span>
+                            <span className="legend-item"><span className="legend-dot light"></span>light {napStatus.details.lightSleepMinutes || 0}m</span>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                    {napStatus.recommendation && (
+                      <div className="detail-row recommendation">
+                        <span className="label">note:</span>
+                        <span className="value">{napStatus.recommendation}</span>
+                      </div>
+                    )}
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="card">
-        <p className="tech-stack">
-          Built with React + TypeScript + Vite + Node.js + Express
-        </p>
-      </div>
+                )}
+              </>
+            )}
+          </>
+        )}
+      </main>
     </div>
   )
 }

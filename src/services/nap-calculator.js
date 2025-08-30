@@ -28,20 +28,47 @@ class NapCalculator {
     const mountainTime = new Date(mountainTimeString);
     const hour = mountainTime.getHours();
     
-    // Nap time is 2:00 PM to 4:59 PM Mountain Time (14:00 to 16:59)
-    const isNapTime = hour >= 14 && hour < 17;
+    // Time windows in Mountain Time
+    const isNapTime = hour >= 14 && hour < 17; // 2:00 PM to 4:59 PM
+    const isSleepTime = hour >= 0 && hour < 8; // Midnight to 7:59 AM
     
-    // Emily needs a nap if she got less than 6 hours AND it's nap time
-    const needsNap = sleepHours < 6 && isNapTime;
+    // Determine sleep category and nap need
+    const sleepCategory = this.getSleepCategory(sleepHours);
+    let needsNap = false;
+    let napPriority = 'none'; // none, maybe, yes
+    
+    if (sleepHours < 4) {
+      // Severely sleep deprived - nap at any time
+      needsNap = true;
+      napPriority = 'yes';
+    } else if (sleepHours > 9) {
+      // Probably sick - nap at any time
+      needsNap = true;
+      napPriority = 'yes';
+    } else if (sleepHours >= 4 && sleepHours < 6) {
+      // Struggling - maybe nap during nap period
+      needsNap = isNapTime;
+      napPriority = isNapTime ? 'maybe' : 'none';
+    } else {
+      // Good sleep (6-9 hours) - never needs nap
+      needsNap = false;
+      napPriority = 'none';
+    }
 
     // Generate appropriate message
     let message;
-    if (needsNap) {
-      message = 'YES, EMILY NEEDS A NAP';
-    } else if (!isNapTime && sleepHours < 6) {
-      message = 'Not Nap Time Yet';
+    if (isSleepTime) {
+      message = 'Sleep Time';
+    } else if (sleepHours < 4) {
+      message = 'NAP TIME';
+    } else if (sleepHours > 9) {
+      message = 'NAP TIME';
+    } else if (sleepHours >= 4 && sleepHours < 6 && isNapTime) {
+      message = 'Maybe Nap Time';
+    } else if (sleepHours >= 4 && sleepHours < 6 && !isNapTime) {
+      message = 'Not Nap Time';
     } else {
-      message = "Nah, She's Fine";
+      message = 'Not Nap Time';
     }
 
     // Format current time for display
@@ -54,13 +81,16 @@ class NapCalculator {
       needsNap,
       sleepHours: sleepHours.toFixed(1),
       sleepScore: sleepScore,
+      sleepCategory: sleepCategory,
+      napPriority: napPriority,
       quality: this.getSleepQuality(sleepScore),
       isNapTime,
+      isSleepTime,
       currentTime,
       lastUpdated: new Date().toISOString(),
       message,
       shouldNap: needsNap,
-      recommendation: this.getRecommendation(sleepHours, isNapTime),
+      recommendation: this.getRecommendation(sleepHours, isNapTime, sleepCategory),
       details: {
         totalSleepDurationSeconds: sleepSeconds,
         efficiency: sleepRecord?.efficiency,
@@ -111,28 +141,46 @@ class NapCalculator {
   }
 
   /**
+   * Get sleep category based on hours of sleep
+   * @param {number} sleepHours - Hours of sleep
+   * @returns {string} Sleep category
+   */
+  static getSleepCategory(sleepHours) {
+    if (sleepHours < 4) return 'severely-deprived';
+    if (sleepHours < 6) return 'struggling';
+    if (sleepHours <= 9) return 'good';
+    return 'oversleep'; // Probably sick
+  }
+
+  /**
    * Get personalized nap recommendation
    * @param {number} sleepHours - Hours of sleep last night
    * @param {boolean} isNapTime - Whether it's currently nap time
+   * @param {string} sleepCategory - Sleep category
    * @returns {string} Recommendation text
    */
-  static getRecommendation(sleepHours, isNapTime) {
-    if (sleepHours < 5) {
-      if (isNapTime) {
-        return "You got very little sleep last night! A 20-30 minute nap would really help.";
-      } else {
-        return "You're severely sleep-deprived. Consider going to bed early tonight.";
-      }
-    } else if (sleepHours < 6) {
-      if (isNapTime) {
-        return "A quick 20 minute power nap could boost your energy for the rest of the day.";
-      } else {
-        return "You're a bit tired. Try to get 7-8 hours of sleep tonight.";
-      }
-    } else if (sleepHours < 7) {
-      return "You got decent sleep, but could benefit from 30-60 more minutes tonight.";
-    } else {
-      return "Great sleep! You should have good energy throughout the day.";
+  static getRecommendation(sleepHours, isNapTime, sleepCategory) {
+    switch (sleepCategory) {
+      case 'severely-deprived':
+        return "Emily is severely sleep deprived. She should take a 20-30 minute nap immediately, regardless of the time.";
+      
+      case 'oversleep':
+        return "Emily slept more than 9 hours, which might indicate she's getting sick. A nap could help her recover.";
+      
+      case 'struggling':
+        if (isNapTime) {
+          return "Emily is struggling with sleep debt. A 20 minute power nap during this optimal window could really help.";
+        } else {
+          return "Emily is struggling but it's not nap time. She should try to get 7-8 hours of sleep tonight.";
+        }
+      
+      case 'good':
+      default:
+        if (sleepHours < 7) {
+          return "Emily got decent sleep, but could benefit from 30-60 more minutes tonight.";
+        } else {
+          return "Great sleep! Emily should have good energy throughout the day.";
+        }
     }
   }
 
@@ -176,20 +224,23 @@ class NapCalculator {
       recommendations.push('Take a 20-30 minute nap now');
       recommendations.push('Find a quiet, dark place to rest');
       recommendations.push('Set an alarm to avoid oversleeping');
-    } else if (!status.isNapTime && parseFloat(status.sleepHours) < 6) {
+    } else if (status.sleepCategory === 'severely-deprived' && !status.needsNap) {
+      // This shouldn't happen with new logic, but keeping for safety
+      recommendations.push('Take a nap immediately - severe sleep deprivation');
+    } else if (status.sleepCategory === 'oversleep') {
+      recommendations.push('Take a nap - you might be getting sick');
+      recommendations.push('Monitor how you feel and consider seeing a doctor if oversleeping continues');
+    } else if (status.sleepCategory === 'struggling' && !status.isNapTime) {
       const hoursUntilNapTime = 14 - timeInfo.hour;
-      if (hoursUntilNapTime > 0) {
+      if (hoursUntilNapTime > 0 && hoursUntilNapTime < 12) {
         recommendations.push(`Wait ${hoursUntilNapTime} hours until nap time (2 PM)`);
       } else {
-        recommendations.push('Nap time starts at 2:00 PM Mountain Time');
+        recommendations.push('Nap time is 2:00-5:00 PM Mountain Time');
       }
       recommendations.push('Consider going to bed earlier tonight');
-    } else if (parseFloat(status.sleepHours) >= 6) {
-      recommendations.push('You got enough sleep last night');
+    } else if (status.sleepCategory === 'good') {
+      recommendations.push('You got good sleep last night');
       recommendations.push('Stay active and maintain your energy');
-    } else if (status.isNapTime && parseFloat(status.sleepHours) < 6) {
-      // This case is covered by needsNap, but adding for completeness
-      recommendations.push('Consider a short power nap');
     }
 
     return {

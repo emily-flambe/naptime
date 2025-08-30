@@ -22,7 +22,7 @@ describe('NapCalculator', () => {
   });
 
   describe('calculateNapStatus', () => {
-    it('should determine Emily needs a nap when sleep < 6 hours and time is 2-5 PM MT', () => {
+    it('should determine Emily maybe needs a nap when sleep 4-6 hours and time is 2-5 PM MT', () => {
       // Arrange - Mock Mountain Time 3:00 PM
       mockMountainTime(15, 0); // 3:00 PM
       
@@ -44,11 +44,59 @@ describe('NapCalculator', () => {
       // Assert
       expect(result.needsNap).toBe(true);
       expect(result.sleepHours).toBe('5.5');
+      expect(result.sleepCategory).toBe('struggling');
+      expect(result.napPriority).toBe('maybe');
       expect(result.isNapTime).toBe(true);
-      expect(result.message).toBe('YES, EMILY NEEDS A NAP');
+      expect(result.message).toBe('Maybe Nap Time');
       expect(result.sleepScore).toBe(72);
       expect(result.currentTime).toBeDefined();
       expect(result.lastUpdated).toBeDefined();
+    });
+
+    it('should determine Emily desperately needs a nap when severely sleep deprived (<4 hours) regardless of time', () => {
+      // Arrange - Mock Mountain Time 10:00 AM (outside nap time)
+      mockMountainTime(10, 0);
+      
+      const mockSleepData = {
+        data: [{
+          total_sleep_duration: 10800, // 3 hours in seconds
+          score: 45
+        }]
+      };
+
+      // Act
+      const result = NapCalculator.calculateNapStatus(mockSleepData);
+
+      // Assert
+      expect(result.needsNap).toBe(true);
+      expect(result.sleepHours).toBe('3.0');
+      expect(result.sleepCategory).toBe('severely-deprived');
+      expect(result.napPriority).toBe('yes');
+      expect(result.isNapTime).toBe(false);
+      expect(result.message).toBe('NAP TIME');
+    });
+
+    it('should determine Emily needs a nap when oversleep (>9 hours) indicates sickness', () => {
+      // Arrange - Mock Mountain Time 10:00 AM (outside nap time)
+      mockMountainTime(10, 0);
+      
+      const mockSleepData = {
+        data: [{
+          total_sleep_duration: 36000, // 10 hours in seconds
+          score: 75
+        }]
+      };
+
+      // Act
+      const result = NapCalculator.calculateNapStatus(mockSleepData);
+
+      // Assert
+      expect(result.needsNap).toBe(true);
+      expect(result.sleepHours).toBe('10.0');
+      expect(result.sleepCategory).toBe('oversleep');
+      expect(result.napPriority).toBe('yes');
+      expect(result.isNapTime).toBe(false);
+      expect(result.message).toBe('NAP TIME');
     });
 
     it('should determine Emily does NOT need a nap when sleep >= 6 hours during nap time', () => {
@@ -73,8 +121,10 @@ describe('NapCalculator', () => {
       // Assert
       expect(result.needsNap).toBe(false);
       expect(result.sleepHours).toBe('7.2');
+      expect(result.sleepCategory).toBe('good');
+      expect(result.napPriority).toBe('none');
       expect(result.isNapTime).toBe(true);
-      expect(result.message).toBe("Nah, She's Fine");
+      expect(result.message).toBe('Not Nap Time');
       expect(result.sleepScore).toBe(88);
     });
 
@@ -95,8 +145,10 @@ describe('NapCalculator', () => {
       // Assert
       expect(result.needsNap).toBe(false);
       expect(result.sleepHours).toBe('5.5');
+      expect(result.sleepCategory).toBe('struggling');
+      expect(result.napPriority).toBe('none');
       expect(result.isNapTime).toBe(false);
-      expect(result.message).toBe('Not Nap Time Yet');
+      expect(result.message).toBe('Not Nap Time');
     });
 
     it('should handle edge case: exactly 6 hours of sleep during nap time', () => {
@@ -116,7 +168,7 @@ describe('NapCalculator', () => {
       // Assert
       expect(result.needsNap).toBe(false); // >= 6 hours, so no nap needed
       expect(result.sleepHours).toBe('6.0');
-      expect(result.message).toBe("Nah, She's Fine");
+      expect(result.message).toBe('Not Nap Time');
     });
 
     it('should handle edge case: just under 6 hours during nap time', () => {
@@ -255,18 +307,19 @@ describe('NapCalculator', () => {
  */
 function mockMountainTime(hour, minute = 0) {
   const mockDate = new Date();
+  const OriginalDate = global.Date;
   
   // Mock Date constructor and toLocaleString
-  global.Date = class extends originalDate {
+  global.Date = class extends OriginalDate {
     constructor(...args) {
       if (args.length) {
-        return new originalDate(...args);
+        return new OriginalDate(...args);
       }
-      return new originalDate('2024-01-15T12:00:00Z'); // Arbitrary base time
+      return new OriginalDate('2024-01-15T12:00:00Z'); // Arbitrary base time
     }
     
     static now() {
-      return new originalDate('2024-01-15T12:00:00Z').getTime();
+      return new OriginalDate('2024-01-15T12:00:00Z').getTime();
     }
     
     toLocaleString(locale, options) {
@@ -284,7 +337,7 @@ function mockMountainTime(hour, minute = 0) {
   
   // Also need to mock the Date constructor used in calculateNapStatus
   // The function creates: new Date(now.toLocaleString("en-US", { timeZone: "America/Denver" }))
-  const mockMountainDate = new originalDate();
+  const mockMountainDate = new OriginalDate();
   mockMountainDate.setHours(hour, minute, 0, 0);
   
   global.Date.prototype.toLocaleString = function(locale, options) {

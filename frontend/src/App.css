@@ -1,42 +1,286 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+.app {
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;  /* Align to top instead of center */
+  justify-content: center;
+  padding: 1rem;
+  padding-top: 10vh;  /* Start content at 10% from top */
+}
+
+.nap-container {
+  text-align: center;
+  max-width: 600px;
+  width: 100%;
+}
+
+.loading {
+  font-size: 1.2rem;
+  color: #666;
+  font-style: italic;
+}
+
+.nap-message {
+  font-size: clamp(2.5rem, 8vw, 5.5rem);  /* Slightly smaller to fit better */
+  font-weight: 300;
+  margin: 0;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: inherit;  /* Use the color from root */
+  text-transform: none;  /* Back to normal case */
+  white-space: nowrap;  /* Prevent line breaks */
+}
+
+.details-toggle {
+  margin-top: 2rem;  /* More space */
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  font-family: inherit;
+  transition: color 0.2s;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.details-toggle:hover {
+  color: #666;
+}
+
+.details-toggle:focus-visible {
+  outline: 2px solid #666;
+  outline-offset: 2px;
+}
+
+.details-panel {
+  margin-top: 2rem;  /* Less space */
+  padding: 1rem 1.5rem;  /* Smaller padding */
+  background: #f9f9f9;
+  border-radius: 4px;
+  text-align: left;
+  font-size: 1rem;  /* Smaller font size */
+  width: 380px;  /* Narrower */
+  max-width: 90vw;  /* Responsive on small screens */
+  margin-left: auto;
+  margin-right: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);  /* Subtle shadow for depth */
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.detail-row:last-of-type {
+  border-bottom: none;
+}
+
+.detail-row.sleep-summary {
+  font-size: 1.1rem;
+  line-height: 1.4;
+  border-bottom: 1px solid #e5e5e5;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.sleep-hours {
+  font-weight: 700;
+  font-size: 1.8rem;
+  margin: 0 0.2rem;
+}
+
+.sleep-hours.severely-deprived {
+  color: #dc2626;  /* Dark red for severe sleep deprivation */
+}
+
+.sleep-hours.struggling {
+  color: #ef4444;  /* Lighter red for struggling */
+}
+
+.sleep-hours.good {
+  color: #059669;  /* Green for good sleep */
+}
+
+.sleep-hours.oversleep {
+  color: #f59e0b;  /* Orange/amber for oversleep (might be sick) */
+}
+
+.detail-row.sleep-phases {
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sleep-bar {
+  display: flex;
+  width: 100%;
+  height: 24px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #e5e5e5;
+}
+
+.sleep-segment {
+  height: 100%;
+  transition: opacity 0.2s;
+}
+
+.sleep-segment:hover {
+  opacity: 0.8;
+}
+
+.sleep-segment.deep {
+  background: #1e3a8a;  /* Dark blue for deep sleep */
+}
+
+.sleep-segment.rem {
+  background: #3b82f6;  /* Medium blue for REM sleep */
+}
+
+.sleep-segment.light {
+  background: #93c5fd;  /* Light blue for light sleep */
+}
+
+.sleep-legend {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.9rem;
+  color: #666;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.legend-dot.deep {
+  background: #1e3a8a;
+}
+
+.legend-dot.rem {
+  background: #3b82f6;
+}
+
+.legend-dot.light {
+  background: #93c5fd;
+}
+
+.detail-row.recommendation {
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 1rem 0;
+}
+
+.detail-row.recommendation .value {
+  color: #333;
+  line-height: 1.4;
+}
+
+.label {
+  color: #999;
+  font-weight: 400;
+}
+
+.value {
+  color: #333;
+  font-weight: 500;
+}
+
+.cache-note {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e5e5;
+  color: #999;
+  font-size: 1rem;  /* Slightly larger for readability */
   text-align: center;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.error {
+  text-align: center;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+.error .message {
+  color: #666;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.retry-btn {
+  background: none;
+  border: 1px solid #999;
+  color: #666;
+  padding: 0.5rem 1rem;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.retry-btn:hover {
+  border-color: #666;
+  background: #f9f9f9;
+}
+
+.retry-btn:focus-visible {
+  outline: 2px solid #666;
+  outline-offset: 2px;
+}
+
+@media (prefers-color-scheme: dark) {
+  
+  .details-panel {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   }
-  to {
-    transform: rotate(360deg);
+  
+  .detail-row {
+    border-bottom-color: #333;
   }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+  
+  .label {
+    color: #888;
   }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+  
+  .value {
+    color: #ddd;
+  }
+  
+  .detail-row.sleep-phases .value {
+    color: #999;
+  }
+  
+  .detail-row.recommendation .value {
+    color: #ccc;
+  }
+  
+  .cache-note {
+    border-top-color: #333;
+    color: #666;
+  }
+  
+  .error .message {
+    color: #999;
+  }
+  
+  .retry-btn {
+    border-color: #666;
+    color: #999;
+  }
+  
+  .retry-btn:hover {
+    border-color: #999;
+    background: #1a1a1a;
+  }
 }
