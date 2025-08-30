@@ -11,8 +11,8 @@ const path = require('path');
 require('dotenv').config();
 
 // Import routes
-const authRoutes = require('./routes/auth');
 const apiRoutes = require('./routes/api');
+const authRoutes = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -57,9 +57,9 @@ app.locals.ouraClientSecret = process.env.OURA_CLIENT_SECRET;
 // Serve static files (frontend)
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
-// API Routes
-app.use('/auth', authRoutes);
+// Routes
 app.use('/api', apiRoutes);
+app.use('/auth', authRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -181,10 +181,10 @@ app.use((req, res) => {
 // Start server
 if (require.main === module) {
   app.listen(PORT, () => {
-    console.log(`🌙 Emily Nap Server running on port ${PORT}`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔗 OAuth Client ID: ${process.env.OURA_CLIENT_ID ? process.env.OURA_CLIENT_ID.substring(0, 8) + '...' : 'Not configured'}`);
-    console.log(`⏰ Current Mountain Time: ${new Date().toLocaleString("en-US", { timeZone: "America/Denver" })}`);
+    console.log(`Emily Nap Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`OAuth Client ID: ${process.env.OURA_CLIENT_ID ? process.env.OURA_CLIENT_ID.substring(0, 8) + '...' : 'Not configured'}`);
+    console.log(`Current Mountain Time: ${new Date().toLocaleString("en-US", { timeZone: "America/Denver" })}`);
   });
 }
 

@@ -14,18 +14,23 @@ class OuraService {
    * @returns {Promise<Object>} Sleep data response
    */
   async getYesterdaySleep(accessToken) {
-    // Calculate yesterday's date
+    // Calculate yesterday's date and the day before (for sleep sessions that cross midnight)
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const dateString = yesterday.toISOString().split('T')[0];
+    const dayBefore = new Date(yesterday);
+    dayBefore.setDate(dayBefore.getDate() - 1);
+    
+    const startDateString = dayBefore.toISOString().split('T')[0];
+    const endDateString = yesterday.toISOString().split('T')[0];
 
     try {
+      // Use the sleep endpoint to get actual sleep sessions with duration
       const response = await axios.get(
-        `${OURA_API_BASE}/usercollection/daily_sleep`,
+        `${OURA_API_BASE}/usercollection/sleep`,
         {
           params: {
-            start_date: dateString,
-            end_date: dateString
+            start_date: startDateString,
+            end_date: endDateString
           },
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -132,7 +137,7 @@ class OuraService {
   async getSleepRange(accessToken, startDate, endDate) {
     try {
       const response = await axios.get(
-        `${OURA_API_BASE}/usercollection/daily_sleep`,
+        `${OURA_API_BASE}/usercollection/sleep`,
         {
           params: {
             start_date: startDate,

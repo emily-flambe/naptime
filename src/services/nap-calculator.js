@@ -10,10 +10,13 @@ class NapCalculator {
    * @returns {Object} Nap status with details
    */
   static calculateNapStatus(sleepData) {
-    // Extract sleep information
+    // Extract sleep information (get the most recent sleep session)
     const sleepRecord = sleepData?.data?.[0];
     const sleepSeconds = sleepRecord?.total_sleep_duration || 0;
     const sleepHours = sleepSeconds / 3600;
+    
+    // Get readiness score (proxy for sleep quality in sleep sessions)
+    const sleepScore = sleepRecord?.readiness?.score || null;
 
     // Get current time in Mountain Time (America/Denver)
     const now = new Date();
@@ -50,15 +53,20 @@ class NapCalculator {
     return {
       needsNap,
       sleepHours: sleepHours.toFixed(1),
-      sleepScore: sleepRecord?.score || null,
+      sleepScore: sleepScore,
+      quality: this.getSleepQuality(sleepScore),
       isNapTime,
       currentTime,
       lastUpdated: new Date().toISOString(),
       message,
+      shouldNap: needsNap,
+      recommendation: this.getRecommendation(sleepHours, isNapTime),
       details: {
-        deepSleep: sleepRecord?.contributors?.deep_sleep,
-        efficiency: sleepRecord?.contributors?.efficiency,
-        restfulness: sleepRecord?.contributors?.restfulness
+        totalSleepDurationSeconds: sleepSeconds,
+        efficiency: sleepRecord?.efficiency,
+        deepSleepMinutes: Math.round((sleepRecord?.deep_sleep_duration || 0) / 60),
+        remSleepMinutes: Math.round((sleepRecord?.rem_sleep_duration || 0) / 60),
+        lightSleepMinutes: Math.round((sleepRecord?.light_sleep_duration || 0) / 60)
       }
     };
   }
@@ -100,6 +108,32 @@ class NapCalculator {
     if (score >= 70) return 'Good';
     if (score >= 55) return 'Fair';
     return 'Poor';
+  }
+
+  /**
+   * Get personalized nap recommendation
+   * @param {number} sleepHours - Hours of sleep last night
+   * @param {boolean} isNapTime - Whether it's currently nap time
+   * @returns {string} Recommendation text
+   */
+  static getRecommendation(sleepHours, isNapTime) {
+    if (sleepHours < 5) {
+      if (isNapTime) {
+        return "You got very little sleep last night! A 20-30 minute nap would really help.";
+      } else {
+        return "You're severely sleep-deprived. Consider going to bed early tonight.";
+      }
+    } else if (sleepHours < 6) {
+      if (isNapTime) {
+        return "A quick 20 minute power nap could boost your energy for the rest of the day.";
+      } else {
+        return "You're a bit tired. Try to get 7-8 hours of sleep tonight.";
+      }
+    } else if (sleepHours < 7) {
+      return "You got decent sleep, but could benefit from 30-60 more minutes tonight.";
+    } else {
+      return "Great sleep! You should have good energy throughout the day.";
+    }
   }
 
   /**

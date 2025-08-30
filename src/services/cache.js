@@ -14,18 +14,20 @@ class CacheService {
       useClones: false // Don't clone objects for better performance
     });
 
-    // Setup event listeners for monitoring
-    this.cache.on('set', (key, value) => {
-      console.log(`Cache SET: ${key}`);
-    });
+    // Setup event listeners for monitoring (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      this.cache.on('set', (key, value) => {
+        console.log(`Cache SET: ${key}`);
+      });
 
-    this.cache.on('del', (key, value) => {
-      console.log(`Cache DEL: ${key}`);
-    });
+      this.cache.on('del', (key, value) => {
+        console.log(`Cache DEL: ${key}`);
+      });
 
-    this.cache.on('expired', (key, value) => {
-      console.log(`Cache EXPIRED: ${key}`);
-    });
+      this.cache.on('expired', (key, value) => {
+        console.log(`Cache EXPIRED: ${key}`);
+      });
+    }
   }
 
   /**
