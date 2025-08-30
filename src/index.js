@@ -50,9 +50,8 @@ if (process.env.NODE_ENV !== 'production') {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Store OAuth credentials in app locals for easy access
-app.locals.ouraClientId = process.env.OURA_CLIENT_ID;
-app.locals.ouraClientSecret = process.env.OURA_CLIENT_SECRET;
+// Store API configuration in app locals  
+app.locals.ouraApiToken = process.env.OURA_API_TOKEN;
 
 // Serve static files (frontend)
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
@@ -66,7 +65,13 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'healthy', 
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    nodeVersion: process.version,
+    uptime: Math.floor(process.uptime()),
+    configuration: {
+      ouraApiToken: process.env.OURA_API_TOKEN ? 'configured' : 'missing',
+      sessionSecret: process.env.SESSION_SECRET ? 'configured' : 'missing'
+    }
   });
 });
 
@@ -181,10 +186,21 @@ app.use((req, res) => {
 // Start server
 if (require.main === module) {
   app.listen(PORT, () => {
-    console.log(`Emily Nap Server running on port ${PORT}`);
+    const startupTime = new Date().toISOString();
+    const mountainTime = new Date().toLocaleString("en-US", { timeZone: "America/Denver" });
+    
+    console.log(`=== Emily Nap Server Started ===`);
+    console.log(`Startup Time (UTC): ${startupTime}`);
+    console.log(`Current Mountain Time: ${mountainTime}`);
+    console.log(`Running on port: ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`OAuth Client ID: ${process.env.OURA_CLIENT_ID ? process.env.OURA_CLIENT_ID.substring(0, 8) + '...' : 'Not configured'}`);
-    console.log(`Current Mountain Time: ${new Date().toLocaleString("en-US", { timeZone: "America/Denver" })}`);
+    console.log(`Node.js version: ${process.version}`);
+    
+    // Debug environment variables
+    console.log(`=== Environment Configuration ===`);
+    console.log(`OURA_API_TOKEN: ${process.env.OURA_API_TOKEN ? 'SET (' + process.env.OURA_API_TOKEN.substring(0, 8) + '...)' : 'NOT SET'}`);
+    console.log(`SESSION_SECRET: ${process.env.SESSION_SECRET ? 'SET (****)' : 'NOT SET'}`);
+    console.log(`================================`);
   });
 }
 

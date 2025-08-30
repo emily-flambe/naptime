@@ -50,7 +50,8 @@ help: ## Show available commands
 	@echo "$(GREEN)Deployment:$(NC)"
 	@echo "  $(GREEN)make build$(NC)        - Build Docker image for deployment"
 	@echo "  $(GREEN)make deploy$(NC)       - Deploy to Google Cloud Run"
-	@echo "  $(GREEN)make logs$(NC)         - View Cloud Run logs"
+	@echo "  $(GREEN)make logs$(NC)         - View Cloud Run logs (last 50 entries)"
+	@echo "  $(GREEN)make tail$(NC)         - Tail Cloud Run logs in real-time"
 	@echo "  $(GREEN)make status$(NC)       - Check deployment status"
 	@echo "  $(GREEN)make url$(NC)          - Get deployed service URL"
 	@echo ""
@@ -323,6 +324,20 @@ logs: ## View Cloud Run logs
 		--limit 50 \
 		--project $(PROJECT_ID) \
 		--format "table(timestamp, textPayload)"
+
+.PHONY: tail
+tail: ## Tail Cloud Run service logs in real-time
+	@if [ "$(PROJECT_ID)" = "your-project-id" ]; then \
+		echo "$(RED)Error: PROJECT_ID not set$(NC)"; \
+		echo "Run 'make init' to configure your project"; \
+		exit 1; \
+	fi
+	@echo "$(GREEN)Tailing Cloud Run logs for service: $(SERVICE_NAME)$(NC)"
+	@echo "$(YELLOW)Project: $(PROJECT_ID) | Region: $(REGION)$(NC)"
+	@echo "$(BLUE)Press Ctrl+C to stop...$(NC)"
+	@gcloud run services logs tail $(SERVICE_NAME) \
+		--region=$(REGION) \
+		--project=$(PROJECT_ID)
 
 .PHONY: status
 status: ## Check deployment status
