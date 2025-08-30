@@ -4,6 +4,15 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
     branches: [main]
+    paths:
+      - 'src/**'
+      - 'frontend/**'
+      - 'package*.json'
+      - 'Dockerfile'
+      - 'cloudbuild.yaml'
+      - '.github/workflows/**'
+      - 'deploy*.sh'
+      - 'Makefile'
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
