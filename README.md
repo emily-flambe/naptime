@@ -1,141 +1,123 @@
-# Google Cloud Run Starter Pack
+# Naptime
 
-FastAPI backend + React frontend deployed to Google Cloud Run.
+did I FUCKING stutter
 
-## Prerequisites
+## Features
 
-- Google Cloud account with billing enabled
-- gcloud CLI installed
-- Docker installed  
-- Node.js 20+ and Python 3.11+
+- **Oura Ring Integration**: Direct API access with personal token
+- **Smart Nap Logic**: Determines nap need based on sleep duration (<6 hours) and time window (2-5 PM MT)
+- **Mountain Time Support**: Accurate timezone handling with DST support
+- **RESTful API**: Comprehensive endpoints for nap status, sleep history, and user management
+- **Caching**: Performance optimization with in-memory caching
+- **React Frontend**: Modern React 18 frontend with TypeScript
 
-## Setup
+## Tech Stack
 
-### 1. Google Cloud Project
+- **Backend**: Node.js, Express.js
+- **Frontend**: React 18, TypeScript, Vite
+- **Authentication**: Direct API token access
+- **Testing**: Jest with comprehensive test coverage
+- **Deployment**: Google Cloud Run (containerized)
 
-```bash
-# Create project (or use existing)
-gcloud projects create YOUR_PROJECT_ID --set-as-default
+## Quick Start
 
-# IMPORTANT: Enable billing for your project
-# Check if you have billing accounts:
-gcloud billing accounts list
+### Prerequisites
 
-# Link billing account to project (replace with your billing account ID):
-gcloud billing projects link YOUR_PROJECT_ID --billing-account=BILLING_ACCOUNT_ID
+- Node.js 20+
+- Oura Ring account with API token
+- Google Cloud account (for deployment)
 
-# Or visit: https://console.cloud.google.com/billing to set up billing
-
-# Enable required APIs (requires billing to be enabled)
-gcloud services enable run.googleapis.com artifactregistry.googleapis.com cloudbuild.googleapis.com
-
-# Create Artifact Registry repository
-gcloud artifacts repositories create cloud-run-apps \
-    --repository-format=docker \
-    --location=us-central1 \
-    --description="Docker repository for Cloud Run apps"
-
-# Configure Docker authentication for Artifact Registry
-gcloud auth configure-docker us-central1-docker.pkg.dev
-```
-
-### 2. GitHub Actions (CI/CD)
-
-Create service account:
-```bash
-export PROJECT_ID=YOUR_PROJECT_ID
-export SA_EMAIL="github-actions@${PROJECT_ID}.iam.gserviceaccount.com"
-
-# Create service account
-gcloud iam service-accounts create github-actions --display-name="GitHub Actions"
-
-# Grant permissions
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-    --member="serviceAccount:${SA_EMAIL}" \
-    --role="roles/run.admin"
-
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-    --member="serviceAccount:${SA_EMAIL}" \
-    --role="roles/artifactregistry.writer"
-
-# Create key
-gcloud iam service-accounts keys create key.json --iam-account=${SA_EMAIL}
-```
-
-Add GitHub secrets:
-1. Go to Settings → Secrets → Actions
-2. Add `GCP_PROJECT_ID`: Your project ID
-3. Add `GCP_SA_KEY`: Contents of `key.json`
-4. Delete `key.json` locally
-
-### 3. Local Environment
+### Installation
 
 ```bash
-# Configure environment
-make init  # Creates .env file
-
-# Edit .env
-GCP_PROJECT_ID=YOUR_PROJECT_ID
-GCP_REGION=us-central1
-SERVICE_NAME=hello-world-app
+git clone https://github.com/emily-flambe/naptime.git
+cd naptime
+npm install
 ```
 
-## Development
+### Environment Setup
+
+1. Copy environment template:
+```bash
+cp .env.example .env
+```
+
+2. Configure API credentials:
+```bash
+OURA_API_TOKEN=your_oura_api_token
+NODE_ENV=development
+PORT=8080
+```
+
+### Development
 
 ```bash
-# Install dependencies
-make install
+# Start development server
+npm run dev
 
-# Run locally
-make dev-backend   # FastAPI on :8000
-make dev-frontend  # React on :5173
+# Run tests
+npm test
 
-# Test with Docker
-make test-local    # Runs on :8080
-```
-
-## Deployment
-
-```bash
-# Deploy to Cloud Run
-make deploy        # Full build and deploy
-make quick-deploy  # Deploy from source (fastest)
-
-# View deployment
-make logs          # View logs
-make status        # Check status
-make url           # Get service URL
-```
-
-## Make Commands
-
-| Command | Description |
-|---------|-------------|
-| `make init` | Interactive .env setup |
-| `make install` | Install dependencies |
-| `make dev-backend` | Run backend locally |
-| `make dev-frontend` | Run frontend locally |
-| `make test-local` | Test with Docker |
-| `make build` | Build Docker image |
-| `make deploy` | Deploy to Cloud Run |
-| `make quick-deploy` | Deploy from source |
-| `make logs` | View service logs |
-| `make status` | Check service status |
-| `make url` | Get service URL |
-| `make clean` | Clean build artifacts |
-
-## Project Structure
-
-```
-backend/     # FastAPI (Python)
-frontend/    # React (TypeScript + Vite)
-Dockerfile   # Multi-stage build
-Makefile     # Automation commands
-.github/     # CI/CD workflows
+# Run tests with coverage
+npm run test:coverage
 ```
 
 ## API Endpoints
 
-- `/api/health` - Health check
-- `/api/hello` - Hello endpoint
-- `/*` - React app (production)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Health check |
+| GET | `/api/nap-status` | Get current nap recommendation |
+| GET | `/api/nap-recommendations` | Detailed nap recommendations |
+| GET | `/api/sleep-history` | 7-day sleep history |
+
+## Nap Logic
+
+Emily needs a nap if:
+1. She got less than 6 hours of sleep last night **AND**
+2. Current time is between 2:00 PM and 5:00 PM Mountain Time
+
+## Deployment
+
+### Google Cloud Run
+
+1. Build and deploy:
+```bash
+make build
+make deploy
+```
+
+2. Set production environment variables in Cloud Run
+
+## Testing
+
+The project includes comprehensive test coverage:
+
+- **Unit Tests**: Core business logic and services
+- **Integration Tests**: API endpoints and authentication flow
+- **Mock Testing**: External API dependencies properly mocked
+
+```bash
+npm test                # Run all tests
+npm run test:watch     # Run tests in watch mode
+npm run test:coverage  # Generate coverage report
+```
+
+## Project Structure
+
+```
+src/
+├── index.js              # Express server
+├── routes/
+│   ├── auth.js           # OAuth authentication
+│   └── api.js            # API endpoints
+├── services/
+│   ├── oura.js           # Oura Ring API integration
+│   ├── nap-calculator.js # Nap determination logic
+│   └── cache.js          # Caching service
+└── tests/                # Test suites
+```
+
+## License
+
+ISC

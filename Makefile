@@ -12,6 +12,8 @@ ARTIFACT_REGISTRY_LOCATION ?= us-central1
 ARTIFACT_REGISTRY_REPO ?= cloud-run-apps
 IMAGE_NAME = $(ARTIFACT_REGISTRY_LOCATION)-docker.pkg.dev/$(PROJECT_ID)/$(ARTIFACT_REGISTRY_REPO)/$(SERVICE_NAME)
 PORT = 8080
+BACKEND_PORT = 8080
+FRONTEND_PORT = 5173
 
 # Colors for output
 GREEN = \033[0;32m
@@ -20,12 +22,9 @@ RED = \033[0;31m
 BLUE = \033[0;34m
 NC = \033[0m # No Color
 
-# Python command detection
-PYTHON := $(shell command -v python3 2> /dev/null || command -v python 2> /dev/null)
-PIP := $(shell command -v pip3 2> /dev/null || command -v pip 2> /dev/null)
-VENV_DIR := backend/venv
-VENV_PYTHON := $(VENV_DIR)/bin/python
-VENV_PIP := $(VENV_DIR)/bin/pip
+# Node.js command detection
+NODE := $(shell command -v node 2> /dev/null)
+NPM := $(shell command -v npm 2> /dev/null)
 
 .PHONY: help
 help: ## Show available commands
@@ -40,7 +39,7 @@ help: ## Show available commands
 	@echo "$(GREEN)Development:$(NC)"
 	@echo "  $(GREEN)make dev$(NC)          - Run both frontend and backend servers"
 	@echo "  $(GREEN)make dev-frontend$(NC) - Run frontend server only (port 5173)"
-	@echo "  $(GREEN)make dev-backend$(NC)  - Run backend server only (port 8000)"
+	@echo "  $(GREEN)make dev-backend$(NC)  - Run backend server only (port 8080)"
 	@echo "  $(GREEN)make test-local$(NC)   - Test with Docker locally (port 8080)"
 	@echo ""
 	@echo "$(GREEN)Quality & Testing:$(NC)"
@@ -51,7 +50,10 @@ help: ## Show available commands
 	@echo "$(GREEN)Deployment:$(NC)"
 	@echo "  $(GREEN)make build$(NC)        - Build Docker image for deployment"
 	@echo "  $(GREEN)make deploy$(NC)       - Deploy to Google Cloud Run"
-	@echo "  $(GREEN)make logs$(NC)         - View Cloud Run logs"
+	@echo "  $(GREEN)make logs$(NC)         - View Cloud Run logs (last 50 entries)"
+	@echo "  $(GREEN)make tail$(NC)         - Tail all Cloud Run logs in real-time"
+	@echo "  $(GREEN)make tail name=XXX$(NC) - Tail specific revision logs (e.g., name=oura-naptime-pr-2-88831149379)"
+	@echo "  $(GREEN)make list-revisions$(NC) - List all Cloud Run revisions with URLs"
 	@echo "  $(GREEN)make status$(NC)       - Check deployment status"
 	@echo "  $(GREEN)make url$(NC)          - Get deployed service URL"
 	@echo ""
@@ -124,45 +126,38 @@ init: ## Interactive setup for environment configuration
 
 .PHONY: install
 install: ## Install all dependencies
-	@if [ -z "$(PYTHON)" ]; then \
-		echo "$(RED)Error: Python not found. Please install Python 3.11+$(NC)"; \
+	@if [ -z "$(NODE)" ]; then \
+		echo "$(RED)Error: Node.js not found. Please install Node.js 18+$(NC)"; \
 		exit 1; \
 	fi
-	@echo "$(GREEN)Setting up Python virtual environment...$(NC)"
-	@if [ ! -d "$(VENV_DIR)" ]; then \
-		$(PYTHON) -m venv $(VENV_DIR); \
-		echo "$(GREEN)✓ Virtual environment created$(NC)"; \
-	else \
-		echo "$(YELLOW)Virtual environment already exists$(NC)"; \
+	@if [ -z "$(NPM)" ]; then \
+		echo "$(RED)Error: npm not found. Please install npm$(NC)"; \
+		exit 1; \
 	fi
 	@echo "$(GREEN)Installing backend dependencies...$(NC)"
-	@$(VENV_PIP) install --upgrade pip setuptools wheel
-	@$(VENV_PIP) install -r backend/requirements.txt
+	@npm install
 	@echo "$(GREEN)Installing frontend dependencies...$(NC)"
 	@cd frontend && npm install
 	@echo "$(GREEN)✓ Dependencies installed$(NC)"
-	@echo ""
-	@echo "$(YELLOW)Note: Backend uses virtual environment at $(VENV_DIR)$(NC)"
-	@echo "$(YELLOW)The make commands will automatically use this environment$(NC)"
 
 .PHONY: dev
 dev: ## Run both development servers with hot reload
-	@if [ ! -d "$(VENV_DIR)" ]; then \
-		echo "$(RED)Error: Virtual environment not found$(NC)"; \
+	@if [ -z "$(NODE)" ]; then \
+		echo "$(RED)Error: Node.js not found$(NC)"; \
 		echo "$(YELLOW)Run 'make install' first to set up the environment$(NC)"; \
 		exit 1; \
 	fi
-	@# Check for processes on port 8000 (backend)
-	@if lsof -Pi :8000 -sTCP:LISTEN -t >/dev/null 2>&1; then \
-		echo "$(YELLOW)Port 8000 is already in use (backend)$(NC)"; \
+	@# Check for processes on port 8080 (backend)
+	@if lsof -Pi :8080 -sTCP:LISTEN -t >/dev/null 2>&1; then \
+		echo "$(YELLOW)Port 8080 is already in use (backend)$(NC)"; \
 		printf "Kill the process? [Y/n]: "; \
 		read answer; \
 		if [ "$$answer" != "n" ] && [ "$$answer" != "N" ]; then \
-			lsof -Pi :8000 -sTCP:LISTEN -t | xargs kill -9 2>/dev/null || true; \
-			echo "$(GREEN)✓ Killed process on port 8000$(NC)"; \
+			lsof -Pi :8080 -sTCP:LISTEN -t | xargs kill -9 2>/dev/null || true; \
+			echo "$(GREEN)✓ Killed process on port 8080$(NC)"; \
 			sleep 1; \
 		else \
-			echo "$(RED)Cannot start backend - port 8000 is in use$(NC)"; \
+			echo "$(RED)Cannot start backend - port 8080 is in use$(NC)"; \
 			exit 1; \
 		fi; \
 	fi
@@ -181,11 +176,11 @@ dev: ## Run both development servers with hot reload
 		fi; \
 	fi
 	@echo "$(GREEN)Starting development servers...$(NC)"
-	@echo "$(YELLOW)Backend: http://localhost:8000$(NC)"
+	@echo "$(YELLOW)Backend: http://localhost:8080$(NC)"
 	@echo "$(YELLOW)Frontend: http://localhost:5173$(NC)"
 	@echo "$(YELLOW)Press Ctrl+C to stop both servers$(NC)"
 	@trap 'kill %1 %2' INT; \
-	(cd backend && ./venv/bin/python -m uvicorn main:app --reload --port 8000) & \
+	npm run dev & \
 	(cd frontend && npm run dev) & \
 	wait
 
@@ -211,29 +206,29 @@ dev-frontend: ## Run frontend development server only
 
 .PHONY: dev-backend
 dev-backend: ## Run backend development server only
-	@if [ ! -d "$(VENV_DIR)" ]; then \
-		echo "$(RED)Error: Virtual environment not found$(NC)"; \
+	@if [ -z "$(NODE)" ]; then \
+		echo "$(RED)Error: Node.js not found$(NC)"; \
 		echo "$(YELLOW)Run 'make install' first to set up the environment$(NC)"; \
 		exit 1; \
 	fi
-	@# Check for processes on port 8000
-	@if lsof -Pi :8000 -sTCP:LISTEN -t >/dev/null 2>&1; then \
-		echo "$(YELLOW)Port 8000 is already in use$(NC)"; \
+	@# Check for processes on port 8080
+	@if lsof -Pi :8080 -sTCP:LISTEN -t >/dev/null 2>&1; then \
+		echo "$(YELLOW)Port 8080 is already in use$(NC)"; \
 		printf "Kill the process? [Y/n]: "; \
 		read answer; \
 		if [ "$$answer" != "n" ] && [ "$$answer" != "N" ]; then \
-			lsof -Pi :8000 -sTCP:LISTEN -t | xargs kill -9 2>/dev/null || true; \
-			echo "$(GREEN)✓ Killed process on port 8000$(NC)"; \
+			lsof -Pi :8080 -sTCP:LISTEN -t | xargs kill -9 2>/dev/null || true; \
+			echo "$(GREEN)✓ Killed process on port 8080$(NC)"; \
 			sleep 1; \
 		else \
-			echo "$(RED)Cannot start backend - port 8000 is in use$(NC)"; \
+			echo "$(RED)Cannot start backend - port 8080 is in use$(NC)"; \
 			exit 1; \
 		fi; \
 	fi
 	@echo "$(GREEN)Starting backend development server...$(NC)"
-	@echo "$(YELLOW)Backend: http://localhost:8000$(NC)"
-	@echo "$(YELLOW)API Docs: http://localhost:8000/docs$(NC)"
-	@cd backend && ./venv/bin/python -m uvicorn main:app --reload --port 8000
+	@echo "$(YELLOW)Backend: http://localhost:8080$(NC)"
+	@echo "$(YELLOW)API Docs: http://localhost:8080/api$(NC)"
+	@npm run dev
 
 .PHONY: test-local
 test-local: build ## Test the Docker container locally
@@ -250,8 +245,19 @@ build: ## Build Docker image for deployment
 	fi
 	@echo "$(GREEN)Building frontend...$(NC)"
 	cd frontend && npm run build
-	@echo "$(GREEN)Building Docker image...$(NC)"
-	docker build --platform linux/amd64 -t $(IMAGE_NAME) .
+	@echo "$(GREEN)Building Docker image with build info...$(NC)"
+	@BUILD_TIMESTAMP=$$(date -u +"%Y-%m-%dT%H:%M:%SZ"); \
+	GIT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
+	GIT_BRANCH=$$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown"); \
+	echo "$(YELLOW)Build Info:$(NC)"; \
+	echo "  Timestamp: $$BUILD_TIMESTAMP"; \
+	echo "  Git Commit: $$GIT_COMMIT"; \
+	echo "  Git Branch: $$GIT_BRANCH"; \
+	docker build --platform linux/amd64 \
+		--build-arg BUILD_TIMESTAMP="$$BUILD_TIMESTAMP" \
+		--build-arg GIT_COMMIT="$$GIT_COMMIT" \
+		--build-arg GIT_BRANCH="$$GIT_BRANCH" \
+		-t $(IMAGE_NAME) .
 	@echo "$(GREEN)✓ Build complete$(NC)"
 
 .PHONY: test
@@ -290,6 +296,11 @@ deploy: build ## Deploy to Google Cloud Run
 	@echo "$(GREEN)Pushing image to Artifact Registry...$(NC)"
 	docker push $(IMAGE_NAME)
 	@echo "$(GREEN)Deploying to Cloud Run...$(NC)"
+	@if [ -z "$(OURA_API_TOKEN)" ]; then \
+		echo "$(YELLOW)Warning: Missing environment variables. Make sure to set:$(NC)"; \
+		echo "  OURA_API_TOKEN=$(OURA_API_TOKEN)"; \
+		echo "$(YELLOW)Add this to your .env file or export it$(NC)"; \
+	fi
 	gcloud run deploy $(SERVICE_NAME) \
 		--image $(IMAGE_NAME) \
 		--platform managed \
@@ -297,6 +308,7 @@ deploy: build ## Deploy to Google Cloud Run
 		--allow-unauthenticated \
 		--port $(PORT) \
 		--memory 512Mi \
+		--set-env-vars "NODE_ENV=production,OURA_API_TOKEN=$(OURA_API_TOKEN)" \
 		--project $(PROJECT_ID)
 	@echo "$(GREEN)✓ Deployment complete!$(NC)"
 	@echo "$(GREEN)Service URL:$(NC)"
@@ -332,6 +344,60 @@ logs: ## View Cloud Run logs
 		--project $(PROJECT_ID) \
 		--format "table(timestamp, textPayload)"
 
+.PHONY: tail
+tail: ## Tail Cloud Run service logs in real-time (shows last 2 minutes, refreshes every 3 seconds). Usage: make tail [name=revision-name]
+	@if [ "$(PROJECT_ID)" = "your-project-id" ]; then \
+		echo "$(RED)Error: PROJECT_ID not set$(NC)"; \
+		echo "Run 'make init' to configure your project"; \
+		exit 1; \
+	fi
+	@if [ -n "$(name)" ]; then \
+		echo "$(GREEN)Tailing Cloud Run logs for revision: $(name)$(NC)"; \
+		FILTER="resource.type=cloud_run_revision AND resource.labels.revision_name=$(name)"; \
+	else \
+		echo "$(GREEN)Tailing Cloud Run logs for service: $(SERVICE_NAME) (all revisions)$(NC)"; \
+		FILTER="resource.type=cloud_run_revision AND resource.labels.service_name=$(SERVICE_NAME)"; \
+	fi; \
+	echo "$(YELLOW)Project: $(PROJECT_ID) | Region: $(REGION)$(NC)"; \
+	echo "$(BLUE)Refreshing every 3 seconds. Press Ctrl+C to stop...$(NC)"; \
+	echo "$(YELLOW)──────────────────────────────────────────────────────────────$(NC)"; \
+	while true; do \
+		gcloud logging read \
+			"$$FILTER AND timestamp>=\"$$(date -u -v-2M '+%Y-%m-%dT%H:%M:%S.000Z')\"" \
+			--project=$(PROJECT_ID) \
+			--limit=50 \
+			--format="value(timestamp.date('%H:%M:%S'),textPayload)" \
+			--order=desc 2>/dev/null | head -20; \
+		sleep 3; \
+		clear; \
+		if [ -n "$(name)" ]; then \
+			echo "$(GREEN)Tailing Cloud Run logs for revision: $(name)$(NC)"; \
+		else \
+			echo "$(GREEN)Tailing Cloud Run logs for service: $(SERVICE_NAME) (all revisions)$(NC)"; \
+		fi; \
+		echo "$(YELLOW)Project: $(PROJECT_ID) | Region: $(REGION)$(NC)"; \
+		echo "$(BLUE)Refreshing every 3 seconds. Press Ctrl+C to stop...$(NC)"; \
+		echo "$(YELLOW)──────────────────────────────────────────────────────────────$(NC)"; \
+	done
+
+.PHONY: list-revisions
+list-revisions: ## List all Cloud Run revisions for the service
+	@if [ "$(PROJECT_ID)" = "your-project-id" ]; then \
+		echo "$(RED)Error: PROJECT_ID not set$(NC)"; \
+		echo "Run 'make init' to configure your project"; \
+		exit 1; \
+	fi
+	@echo "$(GREEN)Listing Cloud Run revisions for service: $(SERVICE_NAME)$(NC)"
+	@echo "$(YELLOW)Project: $(PROJECT_ID) | Region: $(REGION)$(NC)"
+	@echo "$(BLUE)──────────────────────────────────────────────────────────────$(NC)"
+	@gcloud run revisions list \
+		--service=$(SERVICE_NAME) \
+		--region=$(REGION) \
+		--project=$(PROJECT_ID) \
+		--format="table(name:label='REVISION NAME',metadata.annotations.'run.googleapis.com/urls':label='PREVIEW URL',status.conditions[0].lastTransitionTime.date('%Y-%m-%d %H:%M'):label='DEPLOYED',spec.containerConcurrency:label='CONCURRENCY',status.traffic.percent:label='TRAFFIC %')"
+	@echo ""
+	@echo "$(GREEN)Tip: Use 'make tail name=<revision-name>' to tail logs for a specific revision$(NC)"
+
 .PHONY: status
 status: ## Check deployment status
 	@if [ "$(PROJECT_ID)" = "your-project-id" ]; then \
@@ -364,9 +430,7 @@ url: ## Get deployed service URL
 clean: ## Clean build artifacts and caches
 	@echo "$(GREEN)Cleaning build artifacts...$(NC)"
 	@rm -rf frontend/dist frontend/node_modules/.vite
-	@rm -rf backend/__pycache__ backend/*.pyc backend/.pytest_cache backend/venv
-	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	@find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	@rm -rf node_modules/.cache coverage
 	@echo "$(GREEN)✓ Clean complete$(NC)"
 
 .PHONY: check-env
