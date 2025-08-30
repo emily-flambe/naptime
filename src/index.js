@@ -4,33 +4,73 @@
  */
 
 const express = require('express');
-const session = require('express-session');
 const path = require('path');
+const fs = require('fs');
 
 // Load environment variables
 require('dotenv').config();
 
+// Enhanced logging function
+function logWithTimestamp(level, message, data = null) {
+  const timestamp = new Date().toISOString();
+  const mountainTime = new Date().toLocaleString("en-US", { 
+    timeZone: "America/Denver",
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+  
+  const logMessage = `[${timestamp}] [MT: ${mountainTime}] [${level.toUpperCase()}] ${message}`;
+  
+  if (data) {
+    console.log(logMessage, data);
+  } else {
+    console.log(logMessage);
+  }
+}
+
+// Load build info
+let buildInfo = {
+  buildTimestamp: process.env.BUILD_TIMESTAMP || 'unknown',
+  gitCommit: process.env.GIT_COMMIT || 'unknown',
+  gitBranch: process.env.GIT_BRANCH || 'unknown',
+  nodeVersion: process.version,
+  npmVersion: 'unknown'
+};
+
+try {
+  const buildInfoFile = path.join(__dirname, '../build-info.json');
+  if (fs.existsSync(buildInfoFile)) {
+    const fileContent = fs.readFileSync(buildInfoFile, 'utf8');
+    const fileBuildInfo = JSON.parse(fileContent);
+    buildInfo = { ...buildInfo, ...fileBuildInfo };
+    logWithTimestamp('info', 'Build info loaded from file', buildInfo);
+  } else {
+    logWithTimestamp('warn', 'Build info file not found, using environment variables');
+  }
+} catch (error) {
+  logWithTimestamp('error', 'Failed to load build info', error.message);
+}
+
 // Import routes
 const apiRoutes = require('./routes/api');
-const authRoutes = require('./routes/auth');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Session configuration
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
-}));
+logWithTimestamp('info', `Initializing Emily Nap Server on port ${PORT}`);
+logWithTimestamp('info', 'Environment variables loaded', {
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  PORT: PORT,
+  OURA_API_TOKEN: process.env.OURA_API_TOKEN ? 'SET' : 'MISSING'
+});
 
 // CORS middleware for development
 if (process.env.NODE_ENV !== 'production') {
+  logWithTimestamp('info', 'Configuring CORS for development');
   app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', 'http://localhost:5173');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -44,42 +84,68 @@ if (process.env.NODE_ENV !== 'production') {
     
     next();
   });
+} else {
+  logWithTimestamp('info', 'Production mode - CORS disabled');
 }
 
 // Middleware
+logWithTimestamp('info', 'Configuring Express middleware');
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Add request logging middleware
+app.use((req, res, next) => {
+  logWithTimestamp('info', `${req.method} ${req.url}`, {
+    userAgent: req.get('User-Agent'),
+    ip: req.ip || req.connection.remoteAddress
+  });
+  next();
+});
 
 // Store API configuration in app locals  
 app.locals.ouraApiToken = process.env.OURA_API_TOKEN;
 
 // Serve static files (frontend)
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
+const frontendPath = path.join(__dirname, '../frontend/dist');
+logWithTimestamp('info', `Configuring static file serving from: ${frontendPath}`);
+app.use(express.static(frontendPath));
 
 // Routes
+logWithTimestamp('info', 'Configuring routes');
 app.use('/api', apiRoutes);
-app.use('/auth', authRoutes);
+
+// Build info endpoint
+app.get('/api/build-info', (req, res) => {
+  logWithTimestamp('info', 'Build info requested');
+  res.json(buildInfo);
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ 
+  const healthData = { 
     status: 'healthy', 
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
     nodeVersion: process.version,
     uptime: Math.floor(process.uptime()),
+    buildInfo: buildInfo,
     configuration: {
-      ouraApiToken: process.env.OURA_API_TOKEN ? 'configured' : 'missing',
-      sessionSecret: process.env.SESSION_SECRET ? 'configured' : 'missing'
+      ouraApiToken: process.env.OURA_API_TOKEN ? 'configured' : 'missing'
     }
-  });
+  };
+  
+  logWithTimestamp('info', 'Health check requested', healthData);
+  res.json(healthData);
 });
 
 // Root route - serve frontend
 app.get('/', (req, res) => {
   const frontendPath = path.join(__dirname, '../frontend/dist/index.html');
+  logWithTimestamp('info', 'Root route requested', { frontendPath });
+  
   res.sendFile(frontendPath, (err) => {
     if (err) {
+      logWithTimestamp('warn', 'Frontend file not found, serving fallback HTML', { error: err.message });
       // Fallback for development - serve a simple HTML page
       res.send(`
         <!DOCTYPE html>
@@ -137,12 +203,17 @@ app.get('/', (req, res) => {
             <div class="container">
                 <h1>Does Emily Need a Nap?</h1>
                 <div>
-                    <a href="/auth/login" class="button">Connect Oura Ring</a>
                     <a href="/api/nap-status" class="button">Check Nap Status</a>
                 </div>
                 <div class="status">
-                    <p>Backend is running! 🚀</p>
+                    <p>Backend is running!</p>
                     <p>Environment: ${process.env.NODE_ENV || 'development'}</p>
+                    <p>Build: ${buildInfo.buildTimestamp || 'unknown'}</p>
+                    <p>Git: ${buildInfo.gitCommit || 'unknown'} (${buildInfo.gitBranch || 'unknown'})</p>
+                    <div style="margin-top: 1rem;">
+                        <a href="/api/build-info" class="button" style="font-size: 0.8rem;">View Build Info</a>
+                        <a href="/health" class="button" style="font-size: 0.8rem;">Health Check</a>
+                    </div>
                 </div>
             </div>
             <script>
@@ -171,7 +242,13 @@ app.get('/', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Server error:', err.stack);
+  logWithTimestamp('error', 'Server error occurred', {
+    error: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method
+  });
+  
   res.status(500).json({ 
     error: 'Something went wrong!', 
     message: process.env.NODE_ENV === 'development' ? err.message : 'Internal Server Error'
@@ -180,27 +257,46 @@ app.use((err, req, res, next) => {
 
 // 404 handler
 app.use((req, res) => {
+  logWithTimestamp('warn', '404 - Route not found', { url: req.url, method: req.method });
   res.status(404).json({ error: 'Not found' });
 });
 
 // Start server
 if (require.main === module) {
-  app.listen(PORT, () => {
-    const startupTime = new Date().toISOString();
-    const mountainTime = new Date().toLocaleString("en-US", { timeZone: "America/Denver" });
+  const server = app.listen(PORT, () => {
+    logWithTimestamp('info', '=== Emily Nap Server Started ===');
+    logWithTimestamp('info', `Running on port: ${PORT}`);
+    logWithTimestamp('info', `Environment: ${process.env.NODE_ENV || 'development'}`);
+    logWithTimestamp('info', `Node.js version: ${process.version}`);
     
-    console.log(`=== Emily Nap Server Started ===`);
-    console.log(`Startup Time (UTC): ${startupTime}`);
-    console.log(`Current Mountain Time: ${mountainTime}`);
-    console.log(`Running on port: ${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`Node.js version: ${process.version}`);
+    // Log build information
+    logWithTimestamp('info', '=== Build Information ===', buildInfo);
     
-    // Debug environment variables
-    console.log(`=== Environment Configuration ===`);
-    console.log(`OURA_API_TOKEN: ${process.env.OURA_API_TOKEN ? 'SET (' + process.env.OURA_API_TOKEN.substring(0, 8) + '...)' : 'NOT SET'}`);
-    console.log(`SESSION_SECRET: ${process.env.SESSION_SECRET ? 'SET (****)' : 'NOT SET'}`);
-    console.log(`================================`);
+    // Log environment configuration status
+    logWithTimestamp('info', '=== Environment Configuration ===', {
+      OURA_API_TOKEN: process.env.OURA_API_TOKEN ? 'SET' : 'NOT SET',
+      PORT: PORT,
+      NODE_ENV: process.env.NODE_ENV || 'development'
+    });
+    
+    logWithTimestamp('info', '=== Server Ready ===');
+  });
+  
+  // Graceful shutdown handling
+  process.on('SIGTERM', () => {
+    logWithTimestamp('info', 'SIGTERM received, shutting down gracefully');
+    server.close(() => {
+      logWithTimestamp('info', 'Server closed');
+      process.exit(0);
+    });
+  });
+
+  process.on('SIGINT', () => {
+    logWithTimestamp('info', 'SIGINT received, shutting down gracefully');
+    server.close(() => {
+      logWithTimestamp('info', 'Server closed');
+      process.exit(0);
+    });
   });
 }
 

@@ -51,7 +51,9 @@ help: ## Show available commands
 	@echo "  $(GREEN)make build$(NC)        - Build Docker image for deployment"
 	@echo "  $(GREEN)make deploy$(NC)       - Deploy to Google Cloud Run"
 	@echo "  $(GREEN)make logs$(NC)         - View Cloud Run logs (last 50 entries)"
-	@echo "  $(GREEN)make tail$(NC)         - Tail Cloud Run logs in real-time"
+	@echo "  $(GREEN)make tail$(NC)         - Tail all Cloud Run logs in real-time"
+	@echo "  $(GREEN)make tail name=XXX$(NC) - Tail specific revision logs (e.g., name=oura-naptime-pr-2-88831149379)"
+	@echo "  $(GREEN)make list-revisions$(NC) - List all Cloud Run revisions with URLs"
 	@echo "  $(GREEN)make status$(NC)       - Check deployment status"
 	@echo "  $(GREEN)make url$(NC)          - Get deployed service URL"
 	@echo ""
@@ -243,8 +245,19 @@ build: ## Build Docker image for deployment
 	fi
 	@echo "$(GREEN)Building frontend...$(NC)"
 	cd frontend && npm run build
-	@echo "$(GREEN)Building Docker image...$(NC)"
-	docker build --platform linux/amd64 -t $(IMAGE_NAME) .
+	@echo "$(GREEN)Building Docker image with build info...$(NC)"
+	@BUILD_TIMESTAMP=$$(date -u +"%Y-%m-%dT%H:%M:%SZ"); \
+	GIT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo "unknown"); \
+	GIT_BRANCH=$$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown"); \
+	echo "$(YELLOW)Build Info:$(NC)"; \
+	echo "  Timestamp: $$BUILD_TIMESTAMP"; \
+	echo "  Git Commit: $$GIT_COMMIT"; \
+	echo "  Git Branch: $$GIT_BRANCH"; \
+	docker build --platform linux/amd64 \
+		--build-arg BUILD_TIMESTAMP="$$BUILD_TIMESTAMP" \
+		--build-arg GIT_COMMIT="$$GIT_COMMIT" \
+		--build-arg GIT_BRANCH="$$GIT_BRANCH" \
+		-t $(IMAGE_NAME) .
 	@echo "$(GREEN)✓ Build complete$(NC)"
 
 .PHONY: test
@@ -283,6 +296,11 @@ deploy: build ## Deploy to Google Cloud Run
 	@echo "$(GREEN)Pushing image to Artifact Registry...$(NC)"
 	docker push $(IMAGE_NAME)
 	@echo "$(GREEN)Deploying to Cloud Run...$(NC)"
+	@if [ -z "$(OURA_API_TOKEN)" ]; then \
+		echo "$(YELLOW)Warning: Missing environment variables. Make sure to set:$(NC)"; \
+		echo "  OURA_API_TOKEN=$(OURA_API_TOKEN)"; \
+		echo "$(YELLOW)Add this to your .env file or export it$(NC)"; \
+	fi
 	gcloud run deploy $(SERVICE_NAME) \
 		--image $(IMAGE_NAME) \
 		--platform managed \
@@ -290,6 +308,7 @@ deploy: build ## Deploy to Google Cloud Run
 		--allow-unauthenticated \
 		--port $(PORT) \
 		--memory 512Mi \
+		--set-env-vars "NODE_ENV=production,OURA_API_TOKEN=$(OURA_API_TOKEN)" \
 		--project $(PROJECT_ID)
 	@echo "$(GREEN)✓ Deployment complete!$(NC)"
 	@echo "$(GREEN)Service URL:$(NC)"
@@ -326,18 +345,58 @@ logs: ## View Cloud Run logs
 		--format "table(timestamp, textPayload)"
 
 .PHONY: tail
-tail: ## Tail Cloud Run service logs in real-time
+tail: ## Tail Cloud Run service logs in real-time (shows last 2 minutes, refreshes every 3 seconds). Usage: make tail [name=revision-name]
 	@if [ "$(PROJECT_ID)" = "your-project-id" ]; then \
 		echo "$(RED)Error: PROJECT_ID not set$(NC)"; \
 		echo "Run 'make init' to configure your project"; \
 		exit 1; \
 	fi
-	@echo "$(GREEN)Tailing Cloud Run logs for service: $(SERVICE_NAME)$(NC)"
+	@if [ -n "$(name)" ]; then \
+		echo "$(GREEN)Tailing Cloud Run logs for revision: $(name)$(NC)"; \
+		FILTER="resource.type=cloud_run_revision AND resource.labels.revision_name=$(name)"; \
+	else \
+		echo "$(GREEN)Tailing Cloud Run logs for service: $(SERVICE_NAME) (all revisions)$(NC)"; \
+		FILTER="resource.type=cloud_run_revision AND resource.labels.service_name=$(SERVICE_NAME)"; \
+	fi; \
+	echo "$(YELLOW)Project: $(PROJECT_ID) | Region: $(REGION)$(NC)"; \
+	echo "$(BLUE)Refreshing every 3 seconds. Press Ctrl+C to stop...$(NC)"; \
+	echo "$(YELLOW)──────────────────────────────────────────────────────────────$(NC)"; \
+	while true; do \
+		gcloud logging read \
+			"$$FILTER AND timestamp>=\"$$(date -u -v-2M '+%Y-%m-%dT%H:%M:%S.000Z')\"" \
+			--project=$(PROJECT_ID) \
+			--limit=50 \
+			--format="value(timestamp.date('%H:%M:%S'),textPayload)" \
+			--order=desc 2>/dev/null | head -20; \
+		sleep 3; \
+		clear; \
+		if [ -n "$(name)" ]; then \
+			echo "$(GREEN)Tailing Cloud Run logs for revision: $(name)$(NC)"; \
+		else \
+			echo "$(GREEN)Tailing Cloud Run logs for service: $(SERVICE_NAME) (all revisions)$(NC)"; \
+		fi; \
+		echo "$(YELLOW)Project: $(PROJECT_ID) | Region: $(REGION)$(NC)"; \
+		echo "$(BLUE)Refreshing every 3 seconds. Press Ctrl+C to stop...$(NC)"; \
+		echo "$(YELLOW)──────────────────────────────────────────────────────────────$(NC)"; \
+	done
+
+.PHONY: list-revisions
+list-revisions: ## List all Cloud Run revisions for the service
+	@if [ "$(PROJECT_ID)" = "your-project-id" ]; then \
+		echo "$(RED)Error: PROJECT_ID not set$(NC)"; \
+		echo "Run 'make init' to configure your project"; \
+		exit 1; \
+	fi
+	@echo "$(GREEN)Listing Cloud Run revisions for service: $(SERVICE_NAME)$(NC)"
 	@echo "$(YELLOW)Project: $(PROJECT_ID) | Region: $(REGION)$(NC)"
-	@echo "$(BLUE)Press Ctrl+C to stop...$(NC)"
-	@gcloud run services logs tail $(SERVICE_NAME) \
+	@echo "$(BLUE)──────────────────────────────────────────────────────────────$(NC)"
+	@gcloud run revisions list \
+		--service=$(SERVICE_NAME) \
 		--region=$(REGION) \
-		--project=$(PROJECT_ID)
+		--project=$(PROJECT_ID) \
+		--format="table(name:label='REVISION NAME',metadata.annotations.'run.googleapis.com/urls':label='PREVIEW URL',status.conditions[0].lastTransitionTime.date('%Y-%m-%d %H:%M'):label='DEPLOYED',spec.containerConcurrency:label='CONCURRENCY',status.traffic.percent:label='TRAFFIC %')"
+	@echo ""
+	@echo "$(GREEN)Tip: Use 'make tail name=<revision-name>' to tail logs for a specific revision$(NC)"
 
 .PHONY: status
 status: ## Check deployment status

@@ -69,10 +69,14 @@ jobs:
         run: |
           PREVIEW_NAME="${{ env.SERVICE_NAME }}-pr-${{ github.event.pull_request.number }}"
           IMAGE_URL="${{ env.ARTIFACT_REGISTRY_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${PREVIEW_NAME}"
+          BUILD_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           
-          # Build with cache and proper platform
+          # Build with build info and cache
           docker build \
             --platform linux/amd64 \
+            --build-arg BUILD_TIMESTAMP="$BUILD_TIMESTAMP" \
+            --build-arg GIT_COMMIT="${{ github.sha }}" \
+            --build-arg GIT_BRANCH="${{ github.head_ref }}" \
             --cache-from ${IMAGE_URL}:latest \
             --tag ${IMAGE_URL}:${{ github.sha }} \
             --tag ${IMAGE_URL}:latest \
@@ -97,6 +101,7 @@ jobs:
             --memory 512Mi \
             --max-instances 2 \
             --labels "environment=preview,pr=${{ github.event.pull_request.number }}" \
+            --set-env-vars "NODE_ENV=production,OURA_API_TOKEN=${{ secrets.OURA_API_TOKEN }}" \
             --project ${{ env.PROJECT_ID }}
           
           # Get the service URL
