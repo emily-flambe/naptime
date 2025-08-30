@@ -15,7 +15,7 @@ function App() {
     // Determine API URL based on environment
     const apiUrl = import.meta.env.PROD 
       ? '/api/hello'  // In production, use relative path (same domain)
-      : 'http://localhost:8000/api/hello'  // In development, use local backend
+      : 'http://localhost:8080/api/hello'  // In development, use local backend
 
     fetch(apiUrl)
       .then(response => {
@@ -36,7 +36,7 @@ function App() {
 
   return (
     <div className="App">
-      <h1>Google Cloud Run Demo</h1>
+      <h1>Emily Needs A Nap</h1>
       <div className="card">
         <h2>{message}</h2>
         {error && (
@@ -45,7 +45,7 @@ function App() {
           </p>
         )}
         <p className="tech-stack">
-          Built with React + TypeScript + Vite + FastAPI
+          Built with React + TypeScript + Vite + Node.js + Express
         </p>
       </div>
     </div>

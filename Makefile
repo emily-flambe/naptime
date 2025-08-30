@@ -12,6 +12,8 @@ ARTIFACT_REGISTRY_LOCATION ?= us-central1
 ARTIFACT_REGISTRY_REPO ?= cloud-run-apps
 IMAGE_NAME = $(ARTIFACT_REGISTRY_LOCATION)-docker.pkg.dev/$(PROJECT_ID)/$(ARTIFACT_REGISTRY_REPO)/$(SERVICE_NAME)
 PORT = 8080
+BACKEND_PORT = 8080
+FRONTEND_PORT = 5173
 
 # Colors for output
 GREEN = \033[0;32m
@@ -20,12 +22,9 @@ RED = \033[0;31m
 BLUE = \033[0;34m
 NC = \033[0m # No Color
 
-# Python command detection
-PYTHON := $(shell command -v python3 2> /dev/null || command -v python 2> /dev/null)
-PIP := $(shell command -v pip3 2> /dev/null || command -v pip 2> /dev/null)
-VENV_DIR := backend/venv
-VENV_PYTHON := $(VENV_DIR)/bin/python
-VENV_PIP := $(VENV_DIR)/bin/pip
+# Node.js command detection
+NODE := $(shell command -v node 2> /dev/null)
+NPM := $(shell command -v npm 2> /dev/null)
 
 .PHONY: help
 help: ## Show available commands
@@ -40,7 +39,7 @@ help: ## Show available commands
 	@echo "$(GREEN)Development:$(NC)"
 	@echo "  $(GREEN)make dev$(NC)          - Run both frontend and backend servers"
 	@echo "  $(GREEN)make dev-frontend$(NC) - Run frontend server only (port 5173)"
-	@echo "  $(GREEN)make dev-backend$(NC)  - Run backend server only (port 8000)"
+	@echo "  $(GREEN)make dev-backend$(NC)  - Run backend server only (port 8080)"
 	@echo "  $(GREEN)make test-local$(NC)   - Test with Docker locally (port 8080)"
 	@echo ""
 	@echo "$(GREEN)Quality & Testing:$(NC)"
@@ -124,45 +123,38 @@ init: ## Interactive setup for environment configuration
 
 .PHONY: install
 install: ## Install all dependencies
-	@if [ -z "$(PYTHON)" ]; then \
-		echo "$(RED)Error: Python not found. Please install Python 3.11+$(NC)"; \
+	@if [ -z "$(NODE)" ]; then \
+		echo "$(RED)Error: Node.js not found. Please install Node.js 18+$(NC)"; \
 		exit 1; \
 	fi
-	@echo "$(GREEN)Setting up Python virtual environment...$(NC)"
-	@if [ ! -d "$(VENV_DIR)" ]; then \
-		$(PYTHON) -m venv $(VENV_DIR); \
-		echo "$(GREEN)✓ Virtual environment created$(NC)"; \
-	else \
-		echo "$(YELLOW)Virtual environment already exists$(NC)"; \
+	@if [ -z "$(NPM)" ]; then \
+		echo "$(RED)Error: npm not found. Please install npm$(NC)"; \
+		exit 1; \
 	fi
 	@echo "$(GREEN)Installing backend dependencies...$(NC)"
-	@$(VENV_PIP) install --upgrade pip setuptools wheel
-	@$(VENV_PIP) install -r backend/requirements.txt
+	@npm install
 	@echo "$(GREEN)Installing frontend dependencies...$(NC)"
 	@cd frontend && npm install
 	@echo "$(GREEN)✓ Dependencies installed$(NC)"
-	@echo ""
-	@echo "$(YELLOW)Note: Backend uses virtual environment at $(VENV_DIR)$(NC)"
-	@echo "$(YELLOW)The make commands will automatically use this environment$(NC)"
 
 .PHONY: dev
 dev: ## Run both development servers with hot reload
-	@if [ ! -d "$(VENV_DIR)" ]; then \
-		echo "$(RED)Error: Virtual environment not found$(NC)"; \
+	@if [ -z "$(NODE)" ]; then \
+		echo "$(RED)Error: Node.js not found$(NC)"; \
 		echo "$(YELLOW)Run 'make install' first to set up the environment$(NC)"; \
 		exit 1; \
 	fi
-	@# Check for processes on port 8000 (backend)
-	@if lsof -Pi :8000 -sTCP:LISTEN -t >/dev/null 2>&1; then \
-		echo "$(YELLOW)Port 8000 is already in use (backend)$(NC)"; \
+	@# Check for processes on port 8080 (backend)
+	@if lsof -Pi :8080 -sTCP:LISTEN -t >/dev/null 2>&1; then \
+		echo "$(YELLOW)Port 8080 is already in use (backend)$(NC)"; \
 		printf "Kill the process? [Y/n]: "; \
 		read answer; \
 		if [ "$$answer" != "n" ] && [ "$$answer" != "N" ]; then \
-			lsof -Pi :8000 -sTCP:LISTEN -t | xargs kill -9 2>/dev/null || true; \
-			echo "$(GREEN)✓ Killed process on port 8000$(NC)"; \
+			lsof -Pi :8080 -sTCP:LISTEN -t | xargs kill -9 2>/dev/null || true; \
+			echo "$(GREEN)✓ Killed process on port 8080$(NC)"; \
 			sleep 1; \
 		else \
-			echo "$(RED)Cannot start backend - port 8000 is in use$(NC)"; \
+			echo "$(RED)Cannot start backend - port 8080 is in use$(NC)"; \
 			exit 1; \
 		fi; \
 	fi
@@ -181,11 +173,11 @@ dev: ## Run both development servers with hot reload
 		fi; \
 	fi
 	@echo "$(GREEN)Starting development servers...$(NC)"
-	@echo "$(YELLOW)Backend: http://localhost:8000$(NC)"
+	@echo "$(YELLOW)Backend: http://localhost:8080$(NC)"
 	@echo "$(YELLOW)Frontend: http://localhost:5173$(NC)"
 	@echo "$(YELLOW)Press Ctrl+C to stop both servers$(NC)"
 	@trap 'kill %1 %2' INT; \
-	(cd backend && ./venv/bin/python -m uvicorn main:app --reload --port 8000) & \
+	npm run dev & \
 	(cd frontend && npm run dev) & \
 	wait
 
@@ -211,29 +203,29 @@ dev-frontend: ## Run frontend development server only
 
 .PHONY: dev-backend
 dev-backend: ## Run backend development server only
-	@if [ ! -d "$(VENV_DIR)" ]; then \
-		echo "$(RED)Error: Virtual environment not found$(NC)"; \
+	@if [ -z "$(NODE)" ]; then \
+		echo "$(RED)Error: Node.js not found$(NC)"; \
 		echo "$(YELLOW)Run 'make install' first to set up the environment$(NC)"; \
 		exit 1; \
 	fi
-	@# Check for processes on port 8000
-	@if lsof -Pi :8000 -sTCP:LISTEN -t >/dev/null 2>&1; then \
-		echo "$(YELLOW)Port 8000 is already in use$(NC)"; \
+	@# Check for processes on port 8080
+	@if lsof -Pi :8080 -sTCP:LISTEN -t >/dev/null 2>&1; then \
+		echo "$(YELLOW)Port 8080 is already in use$(NC)"; \
 		printf "Kill the process? [Y/n]: "; \
 		read answer; \
 		if [ "$$answer" != "n" ] && [ "$$answer" != "N" ]; then \
-			lsof -Pi :8000 -sTCP:LISTEN -t | xargs kill -9 2>/dev/null || true; \
-			echo "$(GREEN)✓ Killed process on port 8000$(NC)"; \
+			lsof -Pi :8080 -sTCP:LISTEN -t | xargs kill -9 2>/dev/null || true; \
+			echo "$(GREEN)✓ Killed process on port 8080$(NC)"; \
 			sleep 1; \
 		else \
-			echo "$(RED)Cannot start backend - port 8000 is in use$(NC)"; \
+			echo "$(RED)Cannot start backend - port 8080 is in use$(NC)"; \
 			exit 1; \
 		fi; \
 	fi
 	@echo "$(GREEN)Starting backend development server...$(NC)"
-	@echo "$(YELLOW)Backend: http://localhost:8000$(NC)"
-	@echo "$(YELLOW)API Docs: http://localhost:8000/docs$(NC)"
-	@cd backend && ./venv/bin/python -m uvicorn main:app --reload --port 8000
+	@echo "$(YELLOW)Backend: http://localhost:8080$(NC)"
+	@echo "$(YELLOW)API Docs: http://localhost:8080/api$(NC)"
+	@npm run dev
 
 .PHONY: test-local
 test-local: build ## Test the Docker container locally
@@ -364,9 +356,7 @@ url: ## Get deployed service URL
 clean: ## Clean build artifacts and caches
 	@echo "$(GREEN)Cleaning build artifacts...$(NC)"
 	@rm -rf frontend/dist frontend/node_modules/.vite
-	@rm -rf backend/__pycache__ backend/*.pyc backend/.pytest_cache backend/venv
-	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	@find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	@rm -rf node_modules/.cache coverage
 	@echo "$(GREEN)✓ Clean complete$(NC)"
 
 .PHONY: check-env
