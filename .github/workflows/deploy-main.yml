@@ -56,6 +56,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd frontend && npm ci
+
       - name: Setup Google Cloud Authentication
         uses: google-github-actions/auth@v2
         with:
@@ -70,31 +82,44 @@ jobs:
         run: |
           gcloud auth configure-docker ${{ env.ARTIFACT_REGISTRY_LOCATION }}-docker.pkg.dev
 
+      - name: Build frontend
+        run: |
+          echo "Building frontend..."
+          cd frontend && npm run build
+
       - name: Build and Push Docker image
         run: |
           IMAGE_URL="${{ env.ARTIFACT_REGISTRY_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.SERVICE_NAME }}"
           BUILD_TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           
-          # Build with build info and cache
+          echo "Building and pushing Docker image: ${IMAGE_URL}"
+          echo "Build Info:"
+          echo "  Timestamp: $BUILD_TIMESTAMP"
+          echo "  Git Commit: ${{ github.sha }}"
+          echo "  Git Branch: ${{ github.ref_name }}"
+          
+          # Build with build info and cache (same as local Makefile)
           docker build \
             --platform linux/amd64 \
             --build-arg BUILD_TIMESTAMP="$BUILD_TIMESTAMP" \
             --build-arg GIT_COMMIT="${{ github.sha }}" \
             --build-arg GIT_BRANCH="${{ github.ref_name }}" \
             --cache-from ${IMAGE_URL}:latest \
-            --tag ${IMAGE_URL}:${{ github.sha }} \
-            --tag ${IMAGE_URL}:latest \
+            --tag ${IMAGE_URL} \
             .
           
-          # Push both tags
-          docker push ${IMAGE_URL}:${{ github.sha }}
-          docker push ${IMAGE_URL}:latest
+          # Push image to registry
+          echo "Pushing image to Artifact Registry..."
+          docker push ${IMAGE_URL}
 
       - name: Deploy to Cloud Run
         id: deploy
         run: |
-          IMAGE_URL="${{ env.ARTIFACT_REGISTRY_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.SERVICE_NAME }}:${{ github.sha }}"
+          IMAGE_URL="${{ env.ARTIFACT_REGISTRY_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${{ env.SERVICE_NAME }}"
           
+          echo "Deploying to Cloud Run with image: ${IMAGE_URL}"
+          
+          # Deploy with same parameters as local Makefile
           gcloud run deploy ${{ env.SERVICE_NAME }} \
             --image ${IMAGE_URL} \
             --platform managed \
@@ -102,8 +127,6 @@ jobs:
             --allow-unauthenticated \
             --port 8080 \
             --memory 512Mi \
-            --max-instances 10 \
-            --labels "environment=production" \
             --set-env-vars "NODE_ENV=production,OURA_API_TOKEN=${{ secrets.OURA_API_TOKEN }}" \
             --project ${{ env.PROJECT_ID }}
           
