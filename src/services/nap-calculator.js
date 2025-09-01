@@ -14,6 +14,11 @@ class NapCalculator {
     // Look for 'long_sleep' type on today's date (Oura assigns sleep to the day it ends)
     const today = new Date().toISOString().split('T')[0];
     
+    // Check if there's been a nap today (late_nap or any non-long_sleep type on today's date)
+    const todayNap = sleepData?.data?.find(record => 
+      record.day === today && (record.type === 'late_nap' || (record.type === 'sleep' && record.total_sleep_duration < 7200))
+    );
+    
     // Find today's long_sleep record (main sleep) or fall back to most recent long_sleep
     let sleepRecord = sleepData?.data?.find(record => 
       record.day === today && record.type === 'long_sleep'
@@ -24,11 +29,12 @@ class NapCalculator {
       sleepRecord = sleepData?.data?.find(record => record.type === 'long_sleep');
     }
     
-    // If still no long_sleep, fall back to first record
+    // If still no long_sleep, fall back to first record that's not a nap
     if (!sleepRecord) {
-      sleepRecord = sleepData?.data?.[0];
+      sleepRecord = sleepData?.data?.find(record => record.type !== 'late_nap') || sleepData?.data?.[0];
     }
     
+    // Only count main sleep duration, exclude naps
     const sleepSeconds = sleepRecord?.total_sleep_duration || 0;
     const sleepHours = sleepSeconds / 3600;
     
@@ -53,8 +59,13 @@ class NapCalculator {
     const sleepCategory = this.getSleepCategory(sleepHours);
     let needsNap = false;
     let napPriority = 'none'; // none, maybe, yes
+    let hasNappedToday = !!todayNap;
     
-    if (sleepHours < 4) {
+    // If Emily has already napped today, she doesn't need another nap
+    if (hasNappedToday) {
+      needsNap = false;
+      napPriority = 'none';
+    } else if (sleepHours < 4) {
       // Severely sleep deprived - nap at any time
       needsNap = true;
       napPriority = 'yes';
@@ -74,7 +85,9 @@ class NapCalculator {
 
     // Generate appropriate message
     let message;
-    if (isSleepTime) {
+    if (hasNappedToday) {
+      message = 'Not Nap Time';
+    } else if (isSleepTime) {
       message = 'Sleep Time';
     } else if (sleepHours < 4) {
       message = 'NAP TIME';
@@ -107,7 +120,8 @@ class NapCalculator {
       lastUpdated: new Date().toISOString(),
       message,
       shouldNap: needsNap,
-      recommendation: this.getRecommendation(sleepHours, isNapTime, sleepCategory),
+      recommendation: hasNappedToday ? "emily has napped already. Another nap would be silly." : this.getRecommendation(sleepHours, isNapTime, sleepCategory),
+      hasNappedToday,
       details: {
         totalSleepDurationSeconds: sleepSeconds,
         efficiency: sleepRecord?.efficiency,

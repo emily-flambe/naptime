@@ -28,6 +28,8 @@ describe('NapCalculator', () => {
       
       const mockSleepData = {
         data: [{
+          type: 'long_sleep',
+          day: new Date().toISOString().split('T')[0],
           total_sleep_duration: 19800, // 5.5 hours in seconds
           score: 72,
           contributors: {
@@ -59,6 +61,8 @@ describe('NapCalculator', () => {
       
       const mockSleepData = {
         data: [{
+          type: 'long_sleep',
+          day: new Date().toISOString().split('T')[0],
           total_sleep_duration: 10800, // 3 hours in seconds
           score: 45
         }]
@@ -82,6 +86,8 @@ describe('NapCalculator', () => {
       
       const mockSleepData = {
         data: [{
+          type: 'long_sleep',
+          day: new Date().toISOString().split('T')[0],
           total_sleep_duration: 36000, // 10 hours in seconds
           score: 75
         }]
@@ -105,6 +111,8 @@ describe('NapCalculator', () => {
       
       const mockSleepData = {
         data: [{
+          type: 'long_sleep',
+          day: new Date().toISOString().split('T')[0],
           total_sleep_duration: 25920, // 7.2 hours in seconds
           score: 88,
           contributors: {
@@ -134,6 +142,8 @@ describe('NapCalculator', () => {
       
       const mockSleepData = {
         data: [{
+          type: 'long_sleep',
+          day: new Date().toISOString().split('T')[0],
           total_sleep_duration: 19800, // 5.5 hours
           score: 65
         }]
@@ -157,6 +167,8 @@ describe('NapCalculator', () => {
       
       const mockSleepData = {
         data: [{
+          type: 'long_sleep',
+          day: new Date().toISOString().split('T')[0],
           total_sleep_duration: 21600, // exactly 6 hours
           score: 80
         }]
@@ -177,6 +189,8 @@ describe('NapCalculator', () => {
       
       const mockSleepData = {
         data: [{
+          type: 'long_sleep',
+          day: new Date().toISOString().split('T')[0],
           total_sleep_duration: 21540, // 5.983 hours (just under 6)
           score: 75
         }]
@@ -188,7 +202,7 @@ describe('NapCalculator', () => {
       // Assert
       expect(result.needsNap).toBe(true);
       expect(result.sleepHours).toBe('5.9');
-      expect(result.message).toBe('YES, EMILY NEEDS A NAP');
+      expect(result.message).toBe('Maybe Nap Time');
     });
 
     it('should handle missing sleep data gracefully', () => {
@@ -223,12 +237,46 @@ describe('NapCalculator', () => {
       });
     });
 
+    it('should detect when Emily has already napped today', () => {
+      // Arrange - Mock Mountain Time 3:00 PM
+      mockMountainTime(15, 0);
+      
+      const mockSleepData = {
+        data: [
+          {
+            type: 'long_sleep',
+            day: new Date().toISOString().split('T')[0],
+            total_sleep_duration: 14400, // 4 hours - would normally need a nap
+            score: 60
+          },
+          {
+            type: 'late_nap',
+            day: new Date().toISOString().split('T')[0],
+            total_sleep_duration: 1800, // 30 minute nap
+            score: 85
+          }
+        ]
+      };
+
+      // Act
+      const result = NapCalculator.calculateNapStatus(mockSleepData);
+
+      // Assert
+      expect(result.needsNap).toBe(false);
+      expect(result.message).toBe('Not Nap Time');
+      expect(result.recommendation).toBe('emily has napped already. Another nap would be silly.');
+      expect(result.hasNappedToday).toBe(true);
+      expect(result.sleepHours).toBe('4.0'); // Should only count main sleep, not nap
+    });
+
     it('should include detailed sleep metrics in response', () => {
       // Arrange
       mockMountainTime(15, 0);
       
       const mockSleepData = {
         data: [{
+          type: 'long_sleep',
+          day: new Date().toISOString().split('T')[0],
           total_sleep_duration: 18000, // 5 hours
           score: 70,
           contributors: {
@@ -254,25 +302,25 @@ describe('NapCalculator', () => {
   describe('Mountain Time Boundaries', () => {
     it('should recognize 2:00 PM as start of nap time', () => {
       mockMountainTime(14, 0);
-      const result = NapCalculator.calculateNapStatus({ data: [{ total_sleep_duration: 18000 }] });
+      const result = NapCalculator.calculateNapStatus({ data: [{ type: 'long_sleep', day: new Date().toISOString().split('T')[0], total_sleep_duration: 18000 }] });
       expect(result.isNapTime).toBe(true);
     });
 
     it('should recognize 4:59 PM as still nap time', () => {
       mockMountainTime(16, 59);
-      const result = NapCalculator.calculateNapStatus({ data: [{ total_sleep_duration: 18000 }] });
+      const result = NapCalculator.calculateNapStatus({ data: [{ type: 'long_sleep', day: new Date().toISOString().split('T')[0], total_sleep_duration: 18000 }] });
       expect(result.isNapTime).toBe(true);
     });
 
     it('should recognize 5:00 PM as end of nap time', () => {
       mockMountainTime(17, 0);
-      const result = NapCalculator.calculateNapStatus({ data: [{ total_sleep_duration: 18000 }] });
+      const result = NapCalculator.calculateNapStatus({ data: [{ type: 'long_sleep', day: new Date().toISOString().split('T')[0], total_sleep_duration: 18000 }] });
       expect(result.isNapTime).toBe(false);
     });
 
     it('should recognize 1:59 PM as before nap time', () => {
       mockMountainTime(13, 59);
-      const result = NapCalculator.calculateNapStatus({ data: [{ total_sleep_duration: 18000 }] });
+      const result = NapCalculator.calculateNapStatus({ data: [{ type: 'long_sleep', day: new Date().toISOString().split('T')[0], total_sleep_duration: 18000 }] });
       expect(result.isNapTime).toBe(false);
     });
   });
@@ -282,7 +330,7 @@ describe('NapCalculator', () => {
       // Mock specific Mountain Time
       mockMountainTime(15, 30);
       
-      const result = NapCalculator.calculateNapStatus({ data: [{ total_sleep_duration: 21600 }] });
+      const result = NapCalculator.calculateNapStatus({ data: [{ type: 'long_sleep', day: new Date().toISOString().split('T')[0], total_sleep_duration: 21600 }] });
       
       // Should include formatted Mountain Time
       expect(result.currentTime).toMatch(/3:30/);
@@ -292,7 +340,7 @@ describe('NapCalculator', () => {
       // This test ensures we use America/Denver timezone which handles DST
       mockMountainTime(14, 0);
       
-      const result = NapCalculator.calculateNapStatus({ data: [{ total_sleep_duration: 18000 }] });
+      const result = NapCalculator.calculateNapStatus({ data: [{ type: 'long_sleep', day: new Date().toISOString().split('T')[0], total_sleep_duration: 18000 }] });
       
       expect(result.isNapTime).toBe(true);
       expect(result.currentTime).toBeDefined();
