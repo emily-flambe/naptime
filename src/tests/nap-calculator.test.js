@@ -252,6 +252,8 @@ describe('NapCalculator', () => {
           {
             type: 'late_nap',
             day: new Date().toISOString().split('T')[0],
+            bedtime_start: new Date().toISOString().replace(/T.*/, 'T14:00:00-06:00'), // 2pm MT
+            bedtime_end: new Date().toISOString().replace(/T.*/, 'T14:30:00-06:00'), // 2:30pm MT
             total_sleep_duration: 1800, // 30 minute nap
             score: 85
           }
@@ -267,6 +269,40 @@ describe('NapCalculator', () => {
       expect(result.recommendation).toBe('emily has napped already. Another nap would be silly.');
       expect(result.hasNappedToday).toBe(true);
       expect(result.sleepHours).toBe('4.0'); // Should only count main sleep, not nap
+    });
+
+    it('should NOT count nighttime sleep as a nap', () => {
+      // Arrange - Mock Mountain Time 3:00 PM
+      mockMountainTime(15, 0);
+      
+      const mockSleepData = {
+        data: [
+          {
+            type: 'long_sleep',
+            day: new Date().toISOString().split('T')[0],
+            total_sleep_duration: 14400, // 4 hours - would normally need a nap
+            score: 60
+          },
+          {
+            type: 'sleep',
+            day: new Date().toISOString().split('T')[0],
+            bedtime_start: new Date().toISOString().replace(/T.*/, 'T23:30:00-06:00'), // 11:30pm MT (nighttime)
+            bedtime_end: new Date().toISOString().replace(/T.*/, 'T00:00:00-06:00'), // midnight
+            total_sleep_duration: 1800, // 30 minutes
+            score: 70
+          }
+        ]
+      };
+
+      // Act
+      const result = NapCalculator.calculateNapStatus(mockSleepData);
+
+      // Assert - Should NOT have napped (nighttime sleep doesn't count)
+      expect(result.hasNappedToday).toBe(false);
+      expect(result.recommendation).not.toContain('emily has napped already');
+      // With 4 hours sleep at 3pm, Emily would need a nap
+      expect(result.isNapTime).toBe(true);
+      expect(result.needsNap).toBe(true);
     });
 
     it('should include detailed sleep metrics in response', () => {

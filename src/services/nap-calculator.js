@@ -14,10 +14,20 @@ class NapCalculator {
     // Look for 'long_sleep' type on today's date (Oura assigns sleep to the day it ends)
     const today = new Date().toISOString().split('T')[0];
     
-    // Check if there's been a nap today (late_nap or any non-long_sleep type on today's date)
-    const todayNap = sleepData?.data?.find(record => 
-      record.day === today && (record.type === 'late_nap' || (record.type === 'sleep' && record.total_sleep_duration < 7200))
-    );
+    // Check if there's been a nap today (sleep that started between 11am-7pm MT)
+    const todayNap = sleepData?.data?.find(record => {
+      if (record.day !== today) return false;
+      
+      // Parse the bedtime_start to check if it's during daytime (11am-7pm MT)
+      const bedtimeStart = new Date(record.bedtime_start);
+      const startHour = bedtimeStart.getHours();
+      
+      // A nap is sleep that starts between 11am (11:00) and 7pm (19:00)
+      const isDaytimeNap = startHour >= 11 && startHour < 19;
+      
+      // Include late_nap type OR any sleep during daytime hours
+      return record.type === 'late_nap' || (isDaytimeNap && record.type !== 'long_sleep');
+    });
     
     // Find today's long_sleep record (main sleep) or fall back to most recent long_sleep
     let sleepRecord = sleepData?.data?.find(record => 
