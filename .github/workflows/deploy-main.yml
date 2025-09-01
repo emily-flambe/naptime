@@ -15,7 +15,7 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  SERVICE_NAME: oura-naptime
+  SERVICE_NAME: oura-naptime-app
   REGION: us-central1
   ARTIFACT_REGISTRY_LOCATION: us-central1
   ARTIFACT_REGISTRY_REPO: cloud-run-apps
