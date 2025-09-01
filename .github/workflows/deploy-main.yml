@@ -15,7 +15,7 @@ on:
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  SERVICE_NAME: oura-naptime
+  SERVICE_NAME: ${{ secrets.GCP_SERVICE_NAME }}
   REGION: us-central1
   ARTIFACT_REGISTRY_LOCATION: us-central1
   ARTIFACT_REGISTRY_REPO: cloud-run-apps
@@ -99,10 +99,11 @@ jobs:
           echo "  Git Branch: ${{ github.ref_name }}"
           
           # Build with build info (same as local Makefile)
+          GIT_COMMIT_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
           docker build \
             --platform linux/amd64 \
             --build-arg BUILD_TIMESTAMP="$BUILD_TIMESTAMP" \
-            --build-arg GIT_COMMIT="${{ github.sha }}" \
+            --build-arg GIT_COMMIT="$GIT_COMMIT_SHORT" \
             --build-arg GIT_BRANCH="${{ github.ref_name }}" \
             --tag ${IMAGE_URL} \
             .

@@ -227,7 +227,7 @@ class NapCalculator {
         if (isNapTime) {
           return "Emily is probably struggling a little. She would probably benefit from taking a nap.";
         } else {
-          return "Emily has some bad sleep habits, and she is ashamed of them. But now is not the time for a nap. She should try to get more sleep tonight.";
+          return "Emily has bad sleep habits, and she is ashamed of them. But now is not the time for a nap. She should try to get more sleep tonight.";
         }
 
       case "good":
