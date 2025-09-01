@@ -98,13 +98,12 @@ jobs:
           echo "  Git Commit: ${{ github.sha }}"
           echo "  Git Branch: ${{ github.ref_name }}"
           
-          # Build with build info and cache (same as local Makefile)
+          # Build with build info (same as local Makefile)
           docker build \
             --platform linux/amd64 \
             --build-arg BUILD_TIMESTAMP="$BUILD_TIMESTAMP" \
             --build-arg GIT_COMMIT="${{ github.sha }}" \
             --build-arg GIT_BRANCH="${{ github.ref_name }}" \
-            --cache-from ${IMAGE_URL}:latest \
             --tag ${IMAGE_URL} \
             .
           
