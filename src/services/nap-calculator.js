@@ -10,8 +10,25 @@ class NapCalculator {
    * @returns {Object} Nap status with details
    */
   static calculateNapStatus(sleepData) {
-    // Extract sleep information (get the most recent sleep session)
-    const sleepRecord = sleepData?.data?.[0];
+    // Find the main sleep session for last night
+    // Look for 'long_sleep' type on today's date (Oura assigns sleep to the day it ends)
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Find today's long_sleep record (main sleep) or fall back to most recent long_sleep
+    let sleepRecord = sleepData?.data?.find(record => 
+      record.day === today && record.type === 'long_sleep'
+    );
+    
+    // If no sleep for today yet, get the most recent long_sleep
+    if (!sleepRecord) {
+      sleepRecord = sleepData?.data?.find(record => record.type === 'long_sleep');
+    }
+    
+    // If still no long_sleep, fall back to first record
+    if (!sleepRecord) {
+      sleepRecord = sleepData?.data?.[0];
+    }
+    
     const sleepSeconds = sleepRecord?.total_sleep_duration || 0;
     const sleepHours = sleepSeconds / 3600;
     

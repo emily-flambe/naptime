@@ -75,12 +75,29 @@ router.get('/nap-status', async (req, res) => {
     
     console.log(`[${timestamp}] [${requestId}] Nap status calculated: ${status.message}`);
     
+    // Add raw API data for debugging
+    status.debugData = {
+      apiResponse: sleepData,
+      fetchTimestamp: timestamp,
+      dateRange: {
+        requested: `${new Date().toISOString().split('T')[0]} (today)`,
+        apiParams: {
+          start_date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+          end_date: new Date(Date.now() + 86400000).toISOString().split('T')[0]
+        }
+      },
+      recordsFound: sleepData?.data?.length || 0,
+      selectedRecord: sleepData?.data?.find(r => r.day === new Date().toISOString().split('T')[0] && r.type === 'long_sleep') || 
+                     sleepData?.data?.find(r => r.type === 'long_sleep') ||
+                     sleepData?.data?.[0]
+    };
+    
     // Cache the result for 5 minutes
     cache.set(cacheKey, status, 300);
 
     console.log(`[${timestamp}] [${requestId}] Response sent successfully`);
     
-    // Return the status
+    // Return the status with debug data
     res.json(status);
 
   } catch (error) {
