@@ -265,11 +265,11 @@ function App() {
                                 </div>
                                 <div className="debug-row">
                                   <span className="label">Duration:</span>
-                                  <span className="value">{(record.total_sleep_duration / 3600).toFixed(2)} hours</span>
+                                  <span className="value">{record.total_sleep_duration ? (record.total_sleep_duration / 3600).toFixed(2) : 'N/A'} hours</span>
                                 </div>
                                 <div className="debug-row">
                                   <span className="label">Time in Bed:</span>
-                                  <span className="value">{(record.time_in_bed / 3600).toFixed(2)} hours</span>
+                                  <span className="value">{record.time_in_bed ? (record.time_in_bed / 3600).toFixed(2) : 'N/A'} hours</span>
                                 </div>
                                 <div className="debug-row">
                                   <span className="label">Efficiency:</span>
