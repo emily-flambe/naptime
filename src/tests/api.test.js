@@ -21,6 +21,13 @@ describe('API Routes', () => {
     cache.flush.mockClear();
     cache.get.mockReturnValue(undefined); // Default: no cache hit
     cache.set.mockReturnValue(true);
+    // Set a default API token for tests
+    process.env.OURA_API_TOKEN = 'test_api_token';
+  });
+
+  afterEach(() => {
+    // Clean up environment
+    delete process.env.OURA_API_TOKEN;
   });
 
   describe('GET /health', () => {
@@ -37,22 +44,20 @@ describe('API Routes', () => {
   });
 
   describe('GET /api/nap-status', () => {
-    it('should require authentication', async () => {
+    it('should return error when OURA_API_TOKEN is not configured', async () => {
+      // Temporarily clear the token
+      delete process.env.OURA_API_TOKEN;
+      
       const response = await request(app).get('/api/nap-status');
       
-      expect(response.status).toBe(401);
-      expect(response.body).toEqual({
-        error: 'Not authenticated',
-        message: 'Please connect your Oura Ring first',
-        authUrl: '/auth/login',
-        needsAuth: true
+      expect(response.status).toBe(500);
+      expect(response.body).toMatchObject({
+        error: 'Configuration error',
+        message: 'Oura API token not configured'
       });
     });
 
-    it('should return nap status for authenticated user', async () => {
-      // Mock authenticated session
-      const agent = request.agent(app);
-      
+    it('should return nap status when API token is configured', async () => {
       // Mock Oura service response
       const mockSleepData = {
         data: [{
@@ -84,26 +89,15 @@ describe('API Routes', () => {
       };
       napCalculator.calculateNapStatus.mockReturnValue(mockNapStatus);
 
-      // Set up session with authentication
-      await agent
-        .post('/auth/test-session')
-        .send({
-          accessToken: 'mock_access_token',
-          tokenExpiry: Date.now() + 3600000,
-          userId: 'test_user'
-        });
-
-      const response = await agent.get('/api/nap-status');
+      const response = await request(app).get('/api/nap-status');
       
       expect(response.status).toBe(200);
       expect(response.body).toEqual(mockNapStatus);
-      expect(ouraService.getYesterdaySleep).toHaveBeenCalledWith('mock_access_token');
+      expect(ouraService.getYesterdaySleep).toHaveBeenCalledWith('test_api_token');
       expect(napCalculator.calculateNapStatus).toHaveBeenCalledWith(mockSleepData);
     });
 
     it('should return cached results when available', async () => {
-      const agent = request.agent(app);
-      
       const mockCachedStatus = {
         needsNap: false,
         sleepHours: '7.2',
@@ -113,15 +107,7 @@ describe('API Routes', () => {
       
       cache.get.mockReturnValue(mockCachedStatus);
 
-      // Set up authenticated session
-      await agent
-        .post('/auth/test-session')
-        .send({
-          accessToken: 'mock_access_token',
-          tokenExpiry: Date.now() + 3600000
-        });
-
-      const response = await agent.get('/api/nap-status');
+      const response = await request(app).get('/api/nap-status');
       
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
@@ -136,44 +122,26 @@ describe('API Routes', () => {
     });
 
     it('should handle Oura API errors gracefully', async () => {
-      const agent = request.agent(app);
-      
       // Mock API error
       const apiError = new Error('Oura API Error');
       apiError.status = 401;
       ouraService.getYesterdaySleep.mockRejectedValue(apiError);
 
-      await agent
-        .post('/auth/test-session')
-        .send({
-          accessToken: 'invalid_token',
-          tokenExpiry: Date.now() + 3600000
-        });
-
-      const response = await agent.get('/api/nap-status');
+      const response = await request(app).get('/api/nap-status');
       
       expect(response.status).toBe(401);
       expect(response.body).toMatchObject({
         error: 'Authentication failed',
-        needsAuth: true
+        message: 'Oura API token is invalid or expired'
       });
     });
 
     it('should handle rate limiting', async () => {
-      const agent = request.agent(app);
-      
       const rateLimitError = new Error('Rate limit exceeded');
       rateLimitError.status = 429;
       ouraService.getYesterdaySleep.mockRejectedValue(rateLimitError);
 
-      await agent
-        .post('/auth/test-session')
-        .send({
-          accessToken: 'mock_access_token',
-          tokenExpiry: Date.now() + 3600000
-        });
-
-      const response = await agent.get('/api/nap-status');
+      const response = await request(app).get('/api/nap-status');
       
       expect(response.status).toBe(429);
       expect(response.body).toMatchObject({
@@ -184,19 +152,20 @@ describe('API Routes', () => {
   });
 
   describe('GET /api/nap-recommendations', () => {
-    it('should require authentication', async () => {
+    it('should return error when OURA_API_TOKEN is not configured', async () => {
+      // Temporarily clear the token
+      delete process.env.OURA_API_TOKEN;
+      
       const response = await request(app).get('/api/nap-recommendations');
       
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(500);
       expect(response.body).toMatchObject({
-        error: 'Not authenticated',
-        needsAuth: true
+        error: 'Configuration error',
+        message: 'Oura API token not configured'
       });
     });
 
-    it('should return detailed recommendations for authenticated user', async () => {
-      const agent = request.agent(app);
-      
+    it('should return detailed recommendations when API token is configured', async () => {
       const mockSleepData = {
         data: [{ total_sleep_duration: 18000, score: 70 }]
       };
@@ -210,59 +179,11 @@ describe('API Routes', () => {
       ouraService.getYesterdaySleep.mockResolvedValue(mockSleepData);
       napCalculator.getDetailedRecommendations.mockReturnValue(mockRecommendations);
 
-      await agent
-        .post('/auth/test-session')
-        .send({
-          accessToken: 'mock_access_token',
-          tokenExpiry: Date.now() + 3600000
-        });
-
-      const response = await agent.get('/api/nap-recommendations');
+      const response = await request(app).get('/api/nap-recommendations');
       
       expect(response.status).toBe(200);
       expect(response.body).toEqual(mockRecommendations);
       expect(napCalculator.getDetailedRecommendations).toHaveBeenCalledWith(mockSleepData);
-    });
-  });
-
-  describe('GET /api/user', () => {
-    it('should return unauthenticated status when not logged in', async () => {
-      const response = await request(app).get('/api/user');
-      
-      expect(response.status).toBe(200);
-      expect(response.body).toEqual({
-        authenticated: false,
-        authUrl: '/auth/login'
-      });
-    });
-
-    it('should return user info for authenticated user', async () => {
-      const agent = request.agent(app);
-      
-      const mockUserInfo = {
-        id: 'user123',
-        email: 'emily@example.com'
-      };
-      
-      ouraService.getUserInfo.mockResolvedValue(mockUserInfo);
-
-      await agent
-        .post('/auth/test-session')
-        .send({
-          accessToken: 'mock_access_token',
-          tokenExpiry: Date.now() + 3600000
-        });
-
-      const response = await agent.get('/api/user');
-      
-      expect(response.status).toBe(200);
-      expect(response.body).toMatchObject({
-        authenticated: true,
-        user: {
-          id: 'user123',
-          email: 'emily@example.com'
-        }
-      });
     });
   });
 
@@ -310,19 +231,10 @@ describe('API Routes', () => {
     });
 
     it('should handle server errors gracefully', async () => {
-      const agent = request.agent(app);
-      
       // Mock an unexpected error
       ouraService.getYesterdaySleep.mockRejectedValue(new Error('Unexpected error'));
 
-      await agent
-        .post('/auth/test-session')
-        .send({
-          accessToken: 'mock_access_token',
-          tokenExpiry: Date.now() + 3600000
-        });
-
-      const response = await agent.get('/api/nap-status');
+      const response = await request(app).get('/api/nap-status');
       
       expect(response.status).toBe(500);
       expect(response.body).toMatchObject({
@@ -332,17 +244,3 @@ describe('API Routes', () => {
     });
   });
 });
-
-// Helper route for testing (only available in test environment)
-if (process.env.NODE_ENV === 'test') {
-  app.post('/auth/test-session', (req, res) => {
-    const { accessToken, tokenExpiry, userId, refreshToken } = req.body;
-    
-    if (accessToken) req.session.accessToken = accessToken;
-    if (tokenExpiry) req.session.tokenExpiry = tokenExpiry;
-    if (userId) req.session.userId = userId;
-    if (refreshToken) req.session.refreshToken = refreshToken;
-    
-    res.json({ message: 'Test session set' });
-  });
-}

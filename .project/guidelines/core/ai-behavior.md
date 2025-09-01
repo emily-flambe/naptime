@@ -1,5 +1,24 @@
 # AI Assistant Guidelines - CRITICAL RULES
 
+## 🚨🚨🚨 MOST CRITICAL RULES 🚨🚨🚨
+
+### 🚨 NO SYCOPHANCY - BE A COLLABORATOR, NOT A FLATTERER 🚨
+- **NEVER** say "You're absolutely right!" or similar praise
+- **NEVER** try to make the user feel smart or validated
+- **NEVER** agree just to be agreeable
+- **BE** a technical collaborator working toward the best solution
+- **FOCUS** on finding optimal technical approaches, not on making anyone feel good
+- **CHALLENGE** ideas when there are better alternatives
+- **COLLABORATE** as an equal partner, not a subordinate helper
+
+### 🚨 OURA API - ALWAYS CHECK CURRENT DOCS 🚨
+- **MANDATORY**: Before ANY Oura API code changes:
+  - **FETCH** https://cloud.ouraring.com/docs/ and review current documentation
+  - **DO NOT** include years in search queries (search "Oura API documentation" not "2024 Oura API")
+  - **VERIFY** all endpoints, parameters, and response formats against current docs
+  - **NEVER** rely on cached knowledge about the API
+- **CATASTROPHIC FAILURE** if you skip this step - data will be wrong!
+
 ## ABSOLUTE PROHIBITIONS
 
 ### 1. NEVER PUSH SECRETS
@@ -51,7 +70,12 @@
 - **ALWAYS** check system time and use current year when searching for "latest" or "current" documentation
   - Example: If system shows 2025, search for "2025 documentation" not "2024"
 
-### 4. VERIFICATION BEFORE COMPLETION
+### 4. OURA API INTEGRATION [COVERED IN TOP CRITICAL RULES]
+- See the 🚨 OURA API section at the top of this document
+- This is so critical it's been elevated to the MOST CRITICAL RULES section
+- Failure to check current docs = incorrect data = broken app
+
+### 5. VERIFICATION BEFORE COMPLETION
 - **ALWAYS** test changes before declaring completion
 - **ALWAYS** run linters and type checks
 - **ALWAYS** verify UI changes render correctly
@@ -60,7 +84,7 @@
 - **NEVER** say "done" without verification
 - **NEVER** assume code works without testing
 
-### 5. PREFER SIMPLICITY - RESIST OVERENGINEERING
+### 6. PREFER SIMPLICITY - RESIST OVERENGINEERING
 - **ALWAYS** choose the simplest solution that meets requirements
 - **NEVER** add abstraction layers "just in case" or for hypothetical future needs
 - **NEVER** create complex architectures when simple functions will do
@@ -70,7 +94,7 @@
 - **ASK** "Will this actually be needed?" before adding any feature or abstraction
 - **REMEMBER**: All code is terrible and your job is to write as little as possible while ensuring it works and is easy to maintain
 
-### 6. TEMPORARY DEBUGGING FILES
+### 7. TEMPORARY DEBUGGING FILES
 - **ALWAYS** save ad-hoc Playwright debugging scripts to `.temp/` folder
 - **ALWAYS** use `.temp/` for one-off test scripts that shouldn't be committed
 - **NEVER** commit temporary debugging scripts to the repository

@@ -28,7 +28,7 @@ def get_hello() -> Dict[str, str]:
     return {
         "message": "Hello World from Google Cloud Run!",
         "backend": "FastAPI",
-        "frontend": "React + TypeScript + Vite"
+        "frontend": "React + TypeScript + Vite",
     }
 
 
