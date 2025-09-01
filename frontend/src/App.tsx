@@ -20,12 +20,20 @@ interface NapStatus {
     remSleepMinutes?: number
     lightSleepMinutes?: number
   }
+  debugData?: {
+    apiResponse?: any
+    fetchTimestamp?: string
+    dateRange?: any
+    recordsFound?: number
+    selectedRecord?: any
+  }
 }
 
 function App() {
   const [napStatus, setNapStatus] = useState<NapStatus | null>(null)
   const [loadingNap, setLoadingNap] = useState(true)  // Start with true for initial load
   const [detailsExpanded, setDetailsExpanded] = useState(false)
+  const [debugExpanded, setDebugExpanded] = useState(false)
 
   const getApiUrl = useCallback((endpoint: string) => {
     return import.meta.env.PROD 
@@ -38,7 +46,7 @@ function App() {
     try {
       const response = await fetch(getApiUrl('/api/nap-status'))
       const data: NapStatus = await response.json()
-      console.log('Nap status response:', data)  // Debug log
+      // Remove noisy console log
       setNapStatus(data)
       setLoadingNap(false)  // Move this here to ensure it runs after setNapStatus
     } catch (err) {
@@ -157,6 +165,81 @@ function App() {
                       <div className="detail-row recommendation">
                         <span className="label">note:</span>
                         <span className="value">{napStatus.recommendation}</span>
+                      </div>
+                    )}
+                    
+                    {/* Even more details button */}
+                    <button 
+                      className="debug-toggle"
+                      onClick={() => setDebugExpanded(!debugExpanded)}
+                      aria-expanded={debugExpanded}
+                    >
+                      (even more details)
+                    </button>
+                    
+                    {debugExpanded && napStatus.debugData && (
+                      <div className="debug-panel">
+                        <div className="debug-section">
+                          <h4>API Debug Information</h4>
+                          <div className="debug-row">
+                            <span className="label">Fetch Time:</span>
+                            <span className="value">{napStatus.debugData.fetchTimestamp}</span>
+                          </div>
+                          <div className="debug-row">
+                            <span className="label">Records Found:</span>
+                            <span className="value">{napStatus.debugData.recordsFound}</span>
+                          </div>
+                          {napStatus.debugData.selectedRecord && (
+                            <>
+                              <div className="debug-row">
+                                <span className="label">Selected Day:</span>
+                                <span className="value">{napStatus.debugData.selectedRecord.day}</span>
+                              </div>
+                              <div className="debug-row">
+                                <span className="label">Sleep Type:</span>
+                                <span className="value">{napStatus.debugData.selectedRecord.type}</span>
+                              </div>
+                              <div className="debug-row">
+                                <span className="label">Bedtime:</span>
+                                <span className="value">
+                                  {napStatus.debugData.selectedRecord.bedtime_start} to {napStatus.debugData.selectedRecord.bedtime_end}
+                                </span>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                        
+                        {napStatus.debugData.apiResponse?.data && (
+                          <div className="debug-section">
+                            <h4>All Sleep Records</h4>
+                            {napStatus.debugData.apiResponse.data.map((record: any, index: number) => (
+                              <div key={index} className="debug-record">
+                                <div className="debug-row">
+                                  <strong>Record {index + 1}: {record.day} ({record.type})</strong>
+                                </div>
+                                <div className="debug-row">
+                                  <span className="label">Duration:</span>
+                                  <span className="value">{(record.total_sleep_duration / 3600).toFixed(2)} hours</span>
+                                </div>
+                                <div className="debug-row">
+                                  <span className="label">Time in Bed:</span>
+                                  <span className="value">{(record.time_in_bed / 3600).toFixed(2)} hours</span>
+                                </div>
+                                <div className="debug-row">
+                                  <span className="label">Efficiency:</span>
+                                  <span className="value">{record.efficiency}%</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        <div className="debug-section">
+                          <h4>Raw API Response</h4>
+                          <pre className="debug-json">
+                            {JSON.stringify(napStatus.debugData.apiResponse, null, 2)}
+                          </pre>
+                        </div>
                       </div>
                     )}
                   </div>

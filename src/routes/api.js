@@ -29,19 +29,14 @@ router.get('/nap-status', async (req, res) => {
   const requestId = Math.random().toString(36).substring(7);
   const timestamp = new Date().toISOString();
   
-  console.log(`[${timestamp}] [${requestId}] === NAP STATUS REQUEST ===`);
-  console.log(`[${timestamp}] [${requestId}] User-Agent: ${req.get('User-Agent')}`);
-  console.log(`[${timestamp}] [${requestId}] IP: ${req.ip}`);
-  
   try {
     // Use hardcoded access token from environment
     const accessToken = process.env.OURA_API_TOKEN;
     
-    console.log(`[${timestamp}] [${requestId}] OURA_API_TOKEN check: ${accessToken ? 'SET (' + accessToken.substring(0, 8) + '...)' : 'NOT SET'}`);
-    console.log(`[${timestamp}] [${requestId}] Available OURA env vars: ${Object.keys(process.env).filter(k => k.startsWith('OURA')).join(', ')}`);
+    // Token check removed - too noisy
     
     if (!accessToken) {
-      console.log(`[${timestamp}] [${requestId}] ERROR: Missing OURA_API_TOKEN`);
+      console.error('Missing OURA_API_TOKEN');
       return res.status(500).json({
         error: 'Configuration error',
         message: 'Oura API token not configured',
@@ -63,17 +58,11 @@ router.get('/nap-status', async (req, res) => {
       });
     }
 
-    console.log(`[${timestamp}] [${requestId}] Fetching sleep data from Oura API...`);
-    
     // Get sleep data from Oura API
     const sleepData = await ouraService.getYesterdaySleep(accessToken);
     
-    console.log(`[${timestamp}] [${requestId}] Sleep data received: ${sleepData?.data?.length || 0} records`);
-    
     // Calculate nap status
     const status = napCalculator.calculateNapStatus(sleepData);
-    
-    console.log(`[${timestamp}] [${requestId}] Nap status calculated: ${status.message}`);
     
     // Add raw API data for debugging
     status.debugData = {
@@ -95,15 +84,11 @@ router.get('/nap-status', async (req, res) => {
     // Cache the result for 5 minutes
     cache.set(cacheKey, status, 300);
 
-    console.log(`[${timestamp}] [${requestId}] Response sent successfully`);
-    
     // Return the status with debug data
     res.json(status);
 
   } catch (error) {
-    console.log(`[${timestamp}] [${requestId}] ERROR occurred:`, error.message);
-    console.log(`[${timestamp}] [${requestId}] Error status:`, error.status || 'No status');
-    console.log(`[${timestamp}] [${requestId}] Error stack:`, error.stack);
+    console.error('Nap status API error:', error.message);
 
     // Handle different error types
     if (error.status === 401) {
