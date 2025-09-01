@@ -1,6 +1,52 @@
 import { useState, useEffect, useCallback } from 'react'
 import './App.css'
 
+interface SleepRecord {
+  id?: string
+  day?: string
+  type?: string
+  bedtime_start?: string
+  bedtime_end?: string
+  total_sleep_duration?: number
+  time_in_bed?: number
+  efficiency?: number
+  score?: number
+  deep_sleep_duration?: number
+  rem_sleep_duration?: number
+  light_sleep_duration?: number
+  average_breath?: number
+  average_heart_rate?: number
+  average_hrv?: number
+  awake_time?: number
+  readiness?: {
+    score?: number
+    contributors?: {
+      activity_balance?: number
+      body_temperature?: number
+      hrv_balance?: number
+      previous_day_activity?: number
+      previous_night?: number
+      recovery_index?: number
+      resting_heart_rate?: number
+      sleep_balance?: number
+    }
+    temperature_deviation?: number
+    temperature_trend_deviation?: number
+  }
+}
+
+interface ApiResponse {
+  data?: SleepRecord[]
+}
+
+interface DateRange {
+  requested?: string
+  apiParams?: {
+    start_date?: string
+    end_date?: string
+  }
+}
+
 interface NapStatus {
   message: string
   shouldNap: boolean
@@ -21,11 +67,11 @@ interface NapStatus {
     lightSleepMinutes?: number
   }
   debugData?: {
-    apiResponse?: any
+    apiResponse?: ApiResponse
     fetchTimestamp?: string
-    dateRange?: any
+    dateRange?: DateRange
     recordsFound?: number
-    selectedRecord?: any
+    selectedRecord?: SleepRecord
   }
 }
 
@@ -212,7 +258,7 @@ function App() {
                         {napStatus.debugData.apiResponse?.data && (
                           <div className="debug-section">
                             <h4>All Sleep Records</h4>
-                            {napStatus.debugData.apiResponse.data.map((record: any, index: number) => (
+                            {napStatus.debugData.apiResponse.data.map((record: SleepRecord, index: number) => (
                               <div key={index} className="debug-record">
                                 <div className="debug-row">
                                   <strong>Record {index + 1}: {record.day} ({record.type})</strong>
