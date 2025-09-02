@@ -12,7 +12,16 @@ class NapCalculator {
   static calculateNapStatus(sleepData) {
     // Find the main sleep session for last night
     // Look for 'long_sleep' type on today's date (Oura assigns sleep to the day it ends)
-    const today = new Date().toISOString().split("T")[0];
+    // IMPORTANT: Use Mountain Time for date, not UTC
+    const nowMT = new Date().toLocaleString("en-US", { 
+      timeZone: "America/Denver",
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    // Convert MM/DD/YYYY to YYYY-MM-DD format
+    const [month, day, year] = nowMT.split('/');
+    const today = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 
     // Check if there's been a nap today (sleep that started between 11am-7pm MT)
     const todayNap = sleepData?.data?.find((record) => {
@@ -20,7 +29,13 @@ class NapCalculator {
 
       // Parse the bedtime_start to check if it's during daytime (11am-7pm MT)
       const bedtimeStart = new Date(record.bedtime_start);
-      const startHour = bedtimeStart.getHours();
+      
+      // Convert to Mountain Time to get the correct hour
+      const startHour = parseInt(bedtimeStart.toLocaleString("en-US", {
+        timeZone: "America/Denver",
+        hour: "2-digit",
+        hour12: false
+      }));
 
       // A nap is sleep that starts between 11am (11:00) and 7pm (19:00)
       const isDaytimeNap = startHour >= 11 && startHour < 19;
