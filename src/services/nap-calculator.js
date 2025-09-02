@@ -153,7 +153,7 @@ class NapCalculator {
       message,
       shouldNap: needsNap,
       recommendation: hasNappedToday
-        ? "emily has napped already. Another nap would be silly."
+        ? "Emily has napped already. Another nap would be silly."
         : this.getRecommendation(sleepHours, isNapTime, sleepCategory),
       hasNappedToday,
       details: {
