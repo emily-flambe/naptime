@@ -1,0 +1,42 @@
+name: Emoji Linter
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches-ignore: [main]
+
+jobs:
+  emoji-lint:
+    name: Check for emojis in codebase
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Run Emoji Linter
+        uses: ../emoji-linter@main
+        with:
+          path: '.'
+          mode: 'forbid'
+          config-file: '.emoji-linter.config.json'
+          comment-pr: 'true'
+          fail-on-error: 'true'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        id: emoji-check
+        
+      - name: Report Results
+        if: always()
+        run: |
+          echo "Has emojis: ${{ steps.emoji-check.outputs.has-emojis }}"
+          echo "Emoji count: ${{ steps.emoji-check.outputs.emoji-count }}"
+          echo "Files with emojis: ${{ steps.emoji-check.outputs.files-with-emojis }}"
+          echo "Total files scanned: ${{ steps.emoji-check.outputs.total-files }}"
+          
+      - name: Fail if emojis found
+        if: steps.emoji-check.outputs.has-emojis == 'true'
+        run: |
+          echo "ERROR: Emojis found in codebase! This violates the project's no-emoji policy."
+          echo "Please remove all emojis from source code, comments, and documentation."
+          exit 1
