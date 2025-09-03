@@ -19,7 +19,7 @@ jobs:
         uses: emily-flambe/emoji-linter@marketplace-prep
         with:
           path: '.'
-          mode: 'clean'
+          mode: 'check'
           config-file: '.emoji-linter.config.json'
           comment-pr: 'true'
           fail-on-error: 'true'
