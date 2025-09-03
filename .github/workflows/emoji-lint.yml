@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
         
       - name: Run Emoji Linter
-        uses: ../emoji-linter@main
+        uses: emily-flambe/emoji-linter@main
         with:
           path: '.'
           mode: 'forbid'
