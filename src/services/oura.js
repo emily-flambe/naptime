@@ -17,16 +17,31 @@ class OuraService {
     // IMPORTANT: Oura assigns sleep to the day it ENDS
     // So "last night's sleep" will be under TODAY's date if you woke up today
     // We need to fetch today's date to get last night's sleep
-    const today = new Date();
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
+    
+    // CRITICAL FIX: Use Mountain Time for date calculations, not UTC
+    // This ensures proper date alignment when it's past midnight UTC but still previous day in Mountain Time
+    const now = new Date();
+    const todayMT = now.toLocaleDateString("en-US", { 
+      timeZone: "America/Denver",
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    // Convert MM/DD/YYYY to YYYY-MM-DD format for today
+    const [month, day, year] = todayMT.split('/');
+    const todayDateString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    
+    // Calculate yesterday and tomorrow in Mountain Time
+    const todayMTDate = new Date(`${todayDateString}T00:00:00`);
+    const yesterdayMT = new Date(todayMTDate);
+    yesterdayMT.setDate(yesterdayMT.getDate() - 1);
+    const tomorrowMT = new Date(todayMTDate);
+    tomorrowMT.setDate(tomorrowMT.getDate() + 1);
     
     // Fetch yesterday through tomorrow to ensure we get all sleep sessions
     // This captures split sleep sessions and handles timezone/sync delays
-    const startDateString = yesterday.toISOString().split('T')[0];
-    const endDateString = tomorrow.toISOString().split('T')[0];
+    const startDateString = yesterdayMT.toISOString().split('T')[0];
+    const endDateString = tomorrowMT.toISOString().split('T')[0];
 
     try {
       // Use the sleep endpoint to get detailed sleep sessions
