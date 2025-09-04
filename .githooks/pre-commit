@@ -41,7 +41,7 @@ if [ $SCAN_RESULT -ne 0 ]; then
     echo "1. Remove the sensitive information from your code"
     echo "2. Move secrets to environment variables (.env file)"
     echo "3. Add the variable name to .env.example with a placeholder"
-    echo "4. If this is a false positive, see .project/docs/plans/trufflehog-implementation.md"
+    echo "4. If this is a false positive, see .project/docs/explainers/trufflehog-secret-detection.md"
     echo ""
     echo "For more information, run: make scan-secrets"
     exit 1
