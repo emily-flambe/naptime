@@ -22,6 +22,9 @@ jobs:
       - name: TruffleHog OSS
         uses: trufflesecurity/trufflehog@main
         with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
           # Only fail on verified secrets to reduce false positives
           # This scans only the commits in the PR or push, not the entire history
-          extra_args: --results=verified --fail --exclude-paths .trufflehog-ignore
+          extra_args: --only-verified --exclude-paths .trufflehog-ignore

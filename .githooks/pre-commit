@@ -27,7 +27,8 @@ docker run --rm -v "$(pwd):/workdir" -i \
     git file:///workdir \
     --since-commit HEAD \
     --results=verified \
-    --fail 2>/dev/null
+    --fail \
+    --exclude-paths /workdir/.trufflehog-ignore 2>/dev/null
 
 SCAN_RESULT=$?
 
