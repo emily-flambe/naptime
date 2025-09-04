@@ -1,0 +1,27 @@
+name: TruffleHog Secret Scan
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  trufflehog:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for better detection
+          
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          # Only fail on verified secrets to reduce false positives
+          # This scans only the commits in the PR or push, not the entire history
+          extra_args: --results=verified --fail
