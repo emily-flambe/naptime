@@ -117,7 +117,7 @@ class NapCalculator {
 
     // Time windows in Mountain Time
     const isNapTime = hour >= 14 && hour < 17; // 2:00 PM to 4:59 PM
-    const isSleepTime = hour >= 0 && hour < 8; // Midnight to 7:59 AM
+    const isSleepTime = hour >= 23 || hour < 7; // 11:00 PM to 6:59 AM
 
     // Determine sleep category and nap need
     const sleepCategory = this.getSleepCategory(sleepHours);
@@ -186,6 +186,8 @@ class NapCalculator {
       shouldNap: needsNap,
       recommendation: hasNappedToday
         ? "Emily has napped already. Another nap would be silly."
+        : isSleepTime
+        ? "Emily should be asleep right now."
         : this.getRecommendation(sleepHours, isNapTime, sleepCategory),
       hasNappedToday,
       details: {
