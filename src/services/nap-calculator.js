@@ -70,6 +70,38 @@ class NapCalculator {
     const sleepSeconds = sleepRecord?.total_sleep_duration || 0;
     const sleepHours = sleepSeconds / 3600;
 
+    // Check if we have no data (0.0 hours of sleep)
+    const hasNoData = sleepSeconds === 0 || !sleepRecord;
+    if (hasNoData) {
+      // Return special "idk lol" status when we have no data
+      return {
+        needsNap: false,
+        sleepHours: "0.0",
+        sleepScore: null,
+        sleepCategory: "no-data",
+        napPriority: "unknown",
+        quality: "Unknown",
+        isNapTime: this.isCurrentlyNapTime(),
+        isSleepTime: false,
+        currentTime: new Date().toLocaleString("en-US", {
+          timeZone: "America/Denver",
+          timeStyle: "short",
+        }),
+        lastUpdated: new Date().toISOString(),
+        message: "idk lol",
+        shouldNap: false,
+        recommendation: "The Oura API is responding, but no sleep data has been fetched yet. Emily's ring might still be syncing, or she might have forgotten to wear it. Check back in a few minutes!",
+        hasNappedToday: false,
+        details: {
+          totalSleepDurationSeconds: 0,
+          efficiency: null,
+          deepSleepMinutes: 0,
+          remSleepMinutes: 0,
+          lightSleepMinutes: 0,
+        },
+      };
+    }
+
     // Get readiness score (proxy for sleep quality in sleep sessions)
     const sleepScore = sleepRecord?.readiness?.score || null;
 
@@ -217,6 +249,7 @@ class NapCalculator {
    * @returns {string} Sleep category
    */
   static getSleepCategory(sleepHours) {
+    if (sleepHours === 0) return "no-data";
     if (sleepHours < 4) return "severely-deprived";
     if (sleepHours < 6) return "struggling";
     if (sleepHours <= 9) return "good";
@@ -232,6 +265,9 @@ class NapCalculator {
    */
   static getRecommendation(sleepHours, isNapTime, sleepCategory) {
     switch (sleepCategory) {
+      case "no-data":
+        return "The Oura API is responding, but no sleep data has been fetched yet. Emily's ring might still be syncing, or she might have forgotten to wear it. Check back in a few minutes!";
+        
       case "severely-deprived":
         return "Emily is severely sleep deprived. She should take a 20-30 minute nap immediately, regardless of the time.";
 

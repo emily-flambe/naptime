@@ -13,7 +13,10 @@ describe('NapCalculator - Basic Tests', () => {
       expect(result.sleepHours).toBe('0.0');
       expect(result.sleepScore).toBe(null);
       expect(result.needsNap).toBe(false); // No sleep data means no nap needed
-      expect(result.message).toBeDefined();
+      expect(result.message).toBe('idk lol');
+      expect(result.sleepCategory).toBe('no-data');
+      expect(result.napPriority).toBe('unknown');
+      expect(result.recommendation).toContain('Oura API is responding');
       expect(result.currentTime).toBeDefined();
       expect(result.lastUpdated).toBeDefined();
       expect(result.details).toBeDefined();
@@ -25,18 +28,21 @@ describe('NapCalculator - Basic Tests', () => {
       expect(result.sleepHours).toBe('0.0');
       expect(result.sleepScore).toBe(null);
       expect(result.needsNap).toBe(false);
+      expect(result.message).toBe('idk lol');
+      expect(result.sleepCategory).toBe('no-data');
     });
 
     it('should calculate sleep hours correctly', () => {
       const mockSleepData = {
         data: [{
+          day: new Date().toISOString().split('T')[0],
+          type: 'long_sleep',
           total_sleep_duration: 21600, // 6 hours in seconds
-          score: 85,
-          contributors: {
-            deep_sleep: 90,
-            efficiency: 85,
-            restfulness: 80
-          }
+          readiness: { score: 85 },
+          efficiency: 85,
+          deep_sleep_duration: 5400, // 90 minutes in seconds
+          rem_sleep_duration: 7200, // 120 minutes in seconds
+          light_sleep_duration: 9000 // 150 minutes in seconds
         }]
       };
 
@@ -44,21 +50,23 @@ describe('NapCalculator - Basic Tests', () => {
       
       expect(result.sleepHours).toBe('6.0');
       expect(result.sleepScore).toBe(85);
-      expect(result.details.deepSleep).toBe(90);
+      expect(result.details.deepSleepMinutes).toBe(90);
       expect(result.details.efficiency).toBe(85);
-      expect(result.details.restfulness).toBe(80);
+      expect(result.details.remSleepMinutes).toBe(120);
+      expect(result.details.lightSleepMinutes).toBe(150);
     });
 
     it('should include all required fields in response', () => {
       const mockSleepData = {
         data: [{
+          day: new Date().toISOString().split('T')[0],
+          type: 'long_sleep',
           total_sleep_duration: 18000, // 5 hours
-          score: 75,
-          contributors: {
-            deep_sleep: 80,
-            efficiency: 90,
-            restfulness: 70
-          }
+          readiness: { score: 75 },
+          efficiency: 90,
+          deep_sleep_duration: 4800, // 80 minutes
+          rem_sleep_duration: 6000, // 100 minutes  
+          light_sleep_duration: 7200 // 120 minutes
         }]
       };
 
@@ -133,8 +141,10 @@ describe('NapCalculator - Basic Tests', () => {
     it('should provide detailed recommendations', () => {
       const mockSleepData = {
         data: [{
+          day: new Date().toISOString().split('T')[0],
+          type: 'long_sleep',
           total_sleep_duration: 18000, // 5 hours
-          score: 75
+          readiness: { score: 75 }
         }]
       };
 
