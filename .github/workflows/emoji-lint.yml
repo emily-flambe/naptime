@@ -21,3 +21,5 @@ jobs:
           # Use the config file in this repo
           config-file: '.emoji-linter.config.json'
           mode: 'check'
+          # Only check source directories to avoid false positives from dependencies
+          path: 'src'
