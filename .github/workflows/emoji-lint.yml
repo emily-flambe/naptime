@@ -20,4 +20,4 @@ jobs:
         with:
           # Use the config file in this repo
           config-file: '.emoji-linter.config.json'
-          mode: 'forbid'
+          mode: 'clean'
