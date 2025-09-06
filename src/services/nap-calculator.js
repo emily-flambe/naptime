@@ -242,21 +242,21 @@ class NapCalculator {
       'struggling': { message: 'Not Nap Time', recommendation: 'Emily has bad sleep habits, and she is ashamed of them. But now is not the time for a nap. She should try to get more sleep tonight.' },
       'ok': { message: 'Not Nap Time', recommendation: 'Emily got decent sleep. No nap needed yet.' },
       'oversleep': { message: 'Not Nap Time', recommendation: 'Emily might be getting sick - she slept over 9 hours.' },
-      'no-data': { message: 'Not Nap Time', recommendation: 'The Oura API is responding, but no sleep data has been fetched yet. Emily\'s ring might still be syncing, or she might have forgotten to wear it. Check back in a few minutes!' }
+      'no-data': { message: 'Not Nap Time', recommendation: 'The Oura API is responding, but no sleep data has been fetched yet. Emily\'s ring might still be syncing, or idk something dumb might have happened lmao' }
     },
     'nap': {
       'shambles': { message: 'NAP TIME', recommendation: 'Emily is severely sleep deprived. She should take a 20-30 minute nap immediately, regardless of the time.' },
       'struggling': { message: 'Maybe Nap Time', recommendation: 'Emily is probably struggling a little. She would probably benefit from taking a nap.' },
       'ok': { message: 'Not Nap Time', recommendation: 'Emily got decent sleep. A nap is optional but not necessary.' },
       'oversleep': { message: 'NAP TIME', recommendation: 'Emily slept more than 9 hours, which might indicate she\'s getting sick. A nap could help her recover.' },
-      'no-data': { message: 'Unknown', recommendation: 'The Oura API is responding, but no sleep data has been fetched yet. Emily\'s ring might still be syncing, or she might have forgotten to wear it. Check back in a few minutes!' }
+      'no-data': { message: 'Unknown', recommendation: 'The Oura API is responding, but no sleep data has been fetched yet. Emily\'s ring might still be syncing, or idk something dumb might have happened lmao' }
     },
     'post-nap': {
       'shambles': { message: 'Not Nap Time', recommendation: 'GO TO BED GIRL' },
       'struggling': { message: 'Not Nap Time', recommendation: 'Emily really should have slept more last night. She is a bad, bad girl. But it\'s too late to nap. She must live with the consequences of her choices until it is time for bed.' },
       'ok': { message: 'Not Nap Time', recommendation: 'Emily got decent sleep. Time to relax for the evening.' },
       'oversleep': { message: 'Not Nap Time', recommendation: 'Emily might be getting sick - she slept over 9 hours. Rest up tonight.' },
-      'no-data': { message: 'Not Nap Time', recommendation: 'The Oura API is responding, but no sleep data has been fetched yet. Emily\'s ring might still be syncing, or she might have forgotten to wear it. Check back in a few minutes!' }
+      'no-data': { message: 'Not Nap Time', recommendation: 'The Oura API is responding, but no sleep data has been fetched yet. Emily\'s ring might still be syncing, or idk something dumb might have happened lmao' }
     },
     'napped': {
       message: 'Not Nap Time',
