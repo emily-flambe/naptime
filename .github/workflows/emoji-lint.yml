@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
         
       - name: Run emoji linter
-        uses: emily-flambe/emoji-linter@v1.0.2
+        uses: emily-flambe/emoji-linter@v1
         with:
           # Use the config file in this repo
           config-file: '.emoji-linter.config.json'
