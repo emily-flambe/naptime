@@ -75,7 +75,19 @@ class NapCalculator {
     // Check if we have no data (0.0 hours of sleep)
     const hasNoData = sleepSeconds === 0 || !sleepRecord;
     if (hasNoData) {
-      // Return special "idk lol" status when we have no data
+      // Get current time window for no-data message
+      const now = new Date();
+      const hour = parseInt(
+        now.toLocaleString("en-US", {
+          timeZone: "America/Denver",
+          hour: "2-digit",
+          hour12: false,
+        })
+      );
+      const timeWindow = this.getTimeWindow(hour);
+      const noDataConfig = this.MESSAGE_CONFIG[timeWindow]["no-data"];
+      
+      // Return special status when we have no data
       return {
         needsNap: false,
         sleepHours: "0.0",
@@ -83,17 +95,16 @@ class NapCalculator {
         sleepCategory: "no-data",
         napPriority: "unknown",
         quality: "Unknown",
-        isNapTime: this.isCurrentlyNapTime(),
-        isSleepTime: false,
+        isNapTime: timeWindow === 'nap',
+        isSleepTime: timeWindow === 'sleep',
         currentTime: new Date().toLocaleString("en-US", {
           timeZone: "America/Denver",
           timeStyle: "short",
         }),
         lastUpdated: new Date().toISOString(),
-        message: "idk lol",
+        message: noDataConfig.message,
         shouldNap: false,
-        recommendation:
-          "The Oura API is responding, but no sleep data has been fetched yet. Emily's ring might still be syncing, or she might have forgotten to wear it. Check back in a few minutes!",
+        recommendation: noDataConfig.recommendation,
         hasNappedToday: false,
         details: {
           totalSleepDurationSeconds: 0,
@@ -190,20 +201,6 @@ class NapCalculator {
     };
   }
 
-  /**
-   * Check if current time is within nap time window (2-5 PM MT)
-   * @returns {boolean} True if it's currently nap time
-   */
-  static isCurrentlyNapTime() {
-    const now = new Date();
-    const mountainTimeString = now.toLocaleString("en-US", {
-      timeZone: "America/Denver",
-    });
-    const mountainTime = new Date(mountainTimeString);
-    const hour = mountainTime.getHours();
-
-    return hour >= 14 && hour < 17;
-  }
 
   /**
    * Convert seconds to hours with decimal precision
@@ -373,48 +370,6 @@ class NapCalculator {
     return state;
   }
 
-  /**
-   * Get personalized nap recommendation
-   * @param {number} sleepHours - Hours of sleep last night
-   * @param {boolean} isNapTime - Whether it's currently nap time
-   * @param {string} sleepCategory - Sleep category
-   * @param {number} hour - Current hour in Mountain Time
-   * @returns {string} Recommendation text
-   */
-  static getRecommendation(sleepHours, isNapTime, sleepCategory, hour) {
-    // Check if it's after nap time but before bed time (5pm-11pm)
-    const isAfterNapBeforeBed = hour >= 17 && hour < 23;
-    switch (sleepCategory) {
-      case "no-data":
-        return "The Oura API is responding, but no sleep data has been fetched yet. Emily's ring might still be syncing, or she might have forgotten to wear it. Check back in a few minutes!";
-
-      case "severely-deprived":
-        if (isAfterNapBeforeBed) {
-          return "GO TO BED GIRL";
-        }
-        return "Emily is severely sleep deprived. She should take a 20-30 minute nap immediately, regardless of the time.";
-
-      case "oversleep":
-        return "Emily slept more than 9 hours, which might indicate she's getting sick. A nap could help her recover.";
-
-      case "struggling":
-        if (isNapTime) {
-          return "Emily is probably struggling a little. She would probably benefit from taking a nap.";
-        } else if (isAfterNapBeforeBed) {
-          return "Emily really should have slept more last night. She is a bad, bad girl. But it's too late to nap. She must live with the consequences of her choices until it is time for bed.";
-        } else {
-          return "Emily has bad sleep habits, and she is ashamed of them. But now is not the time for a nap. She should try to get more sleep tonight.";
-        }
-
-      case "good":
-      default:
-        if (sleepHours < 7) {
-          return "Emily got decent sleep, but could benefit from 30-60 more minutes tonight.";
-        } else {
-          return "Great sleep! Emily should have good energy throughout the day.";
-        }
-    }
-  }
 
   /**
    * Get current Mountain Time information
@@ -437,7 +392,7 @@ class NapCalculator {
       fullFormatted: now.toLocaleString("en-US", {
         timeZone: "America/Denver",
       }),
-      isNapTime: this.isCurrentlyNapTime(),
+      isNapTime: this.getTimeWindow(mountainTime.getHours()) === 'nap',
     };
   }
 
