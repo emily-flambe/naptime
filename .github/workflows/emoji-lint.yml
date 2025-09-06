@@ -21,3 +21,4 @@ jobs:
           # Use the config file in this repo
           config-file: '.emoji-linter.config.json'
           mode: 'check'
+          show-files: 'true'
