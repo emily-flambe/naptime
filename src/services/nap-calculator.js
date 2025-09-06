@@ -116,54 +116,39 @@ class NapCalculator {
     const hour = mountainTime.getHours();
 
     // Time windows in Mountain Time
-    const isNapTime = hour >= 14 && hour < 17; // 2:00 PM to 4:59 PM
-    const isSleepTime = hour >= 23 || hour < 7; // 11:00 PM to 6:59 AM
+    const timeWindow = this.getTimeWindow(hour);
+    const isNapTime = timeWindow === 'nap';
+    const isSleepTime = timeWindow === 'sleep';
 
-    // Determine sleep category and nap need
-    const sleepCategory = this.getSleepCategory(sleepHours);
+    // Get sleep state and message configuration
+    const sleepState = this.getSleepState(sleepHours);
+    const sleepCategory = this.getSleepCategory(sleepHours); // For backward compatibility
+    const hasNappedToday = !!todayNap;
+
+    // Get message configuration
+    let messageConfig;
+    if (hasNappedToday) {
+      messageConfig = this.MESSAGE_CONFIG.napped;
+    } else {
+      messageConfig = this.MESSAGE_CONFIG[timeWindow][sleepState];
+    }
+
+    // Determine nap need based on configuration
     let needsNap = false;
-    let napPriority = "none"; // none, maybe, yes
-    let hasNappedToday = !!todayNap;
-
-    // If Emily has already napped today, she doesn't need another nap
-    if (hasNappedToday) {
-      needsNap = false;
-      napPriority = "none";
-    } else if (sleepHours < 4) {
-      // Severely sleep deprived - nap at any time
-      needsNap = true;
-      napPriority = "yes";
-    } else if (sleepHours > 9) {
-      // Probably sick - nap at any time
-      needsNap = true;
-      napPriority = "yes";
-    } else if (sleepHours >= 4 && sleepHours < 6) {
-      // Struggling - maybe nap during nap period
-      needsNap = isNapTime;
-      napPriority = isNapTime ? "maybe" : "none";
-    } else {
-      // Good sleep (6-9 hours) - never needs nap
-      needsNap = false;
-      napPriority = "none";
+    let napPriority = "none";
+    
+    if (!hasNappedToday) {
+      if (sleepState === 'shambles' || sleepState === 'oversleep') {
+        needsNap = true;
+        napPriority = "yes";
+      } else if (sleepState === 'struggling' && isNapTime) {
+        needsNap = true;
+        napPriority = "maybe";
+      }
     }
 
-    // Generate appropriate message
-    let message;
-    if (hasNappedToday) {
-      message = "Not Nap Time";
-    } else if (isSleepTime) {
-      message = "Sleep Time";
-    } else if (sleepHours < 4) {
-      message = "NAP TIME";
-    } else if (sleepHours > 9) {
-      message = "NAP TIME";
-    } else if (sleepHours >= 4 && sleepHours < 6 && isNapTime) {
-      message = "Maybe Nap Time";
-    } else if (sleepHours >= 4 && sleepHours < 6 && !isNapTime) {
-      message = "Not Nap Time";
-    } else {
-      message = "Not Nap Time";
-    }
+    const message = messageConfig.message;
+    const configRecommendation = messageConfig.recommendation;
 
     // Format current time for display
     const currentTime = now.toLocaleString("en-US", {
@@ -184,11 +169,7 @@ class NapCalculator {
       lastUpdated: new Date().toISOString(),
       message,
       shouldNap: needsNap,
-      recommendation: hasNappedToday
-        ? "Emily has napped already. Another nap would be silly."
-        : isSleepTime
-        ? "Emily should be asleep right now."
-        : this.getRecommendation(sleepHours, isNapTime, sleepCategory),
+      recommendation: configRecommendation,
       hasNappedToday,
       details: {
         totalSleepDurationSeconds: sleepSeconds,
@@ -246,16 +227,79 @@ class NapCalculator {
   }
 
   /**
+   * Configuration for messages based on time window and sleep state
+   */
+  static MESSAGE_CONFIG = {
+    'sleep': {
+      'shambles': { message: 'Sleep Time', recommendation: 'Emily should be asleep right now.' },
+      'struggling': { message: 'Sleep Time', recommendation: 'Emily should be asleep right now.' },
+      'ok': { message: 'Sleep Time', recommendation: 'Emily should be asleep right now.' },
+      'oversleep': { message: 'Sleep Time', recommendation: 'Emily should be asleep right now.' },
+      'no-data': { message: 'Sleep Time', recommendation: 'Emily should be asleep right now.' }
+    },
+    'pre-nap': {
+      'shambles': { message: 'Not Nap Time', recommendation: 'Emily is in shambles. She needs to survive until nap time at 2 PM.' },
+      'struggling': { message: 'Not Nap Time', recommendation: 'Emily has bad sleep habits, and she is ashamed of them. But now is not the time for a nap. She should try to get more sleep tonight.' },
+      'ok': { message: 'Not Nap Time', recommendation: 'Emily got decent sleep. No nap needed yet.' },
+      'oversleep': { message: 'Not Nap Time', recommendation: 'Emily might be getting sick - she slept over 9 hours.' },
+      'no-data': { message: 'Not Nap Time', recommendation: 'The Oura API is responding, but no sleep data has been fetched yet. Emily\'s ring might still be syncing, or she might have forgotten to wear it. Check back in a few minutes!' }
+    },
+    'nap': {
+      'shambles': { message: 'NAP TIME', recommendation: 'Emily is severely sleep deprived. She should take a 20-30 minute nap immediately, regardless of the time.' },
+      'struggling': { message: 'Maybe Nap Time', recommendation: 'Emily is probably struggling a little. She would probably benefit from taking a nap.' },
+      'ok': { message: 'Not Nap Time', recommendation: 'Emily got decent sleep. A nap is optional but not necessary.' },
+      'oversleep': { message: 'NAP TIME', recommendation: 'Emily slept more than 9 hours, which might indicate she\'s getting sick. A nap could help her recover.' },
+      'no-data': { message: 'Unknown', recommendation: 'The Oura API is responding, but no sleep data has been fetched yet. Emily\'s ring might still be syncing, or she might have forgotten to wear it. Check back in a few minutes!' }
+    },
+    'post-nap': {
+      'shambles': { message: 'Not Nap Time', recommendation: 'GO TO BED GIRL' },
+      'struggling': { message: 'Not Nap Time', recommendation: 'Emily really should have slept more last night. She is a bad, bad girl. But it\'s too late to nap. She must live with the consequences of her choices until it is time for bed.' },
+      'ok': { message: 'Not Nap Time', recommendation: 'Emily got decent sleep. Time to relax for the evening.' },
+      'oversleep': { message: 'Not Nap Time', recommendation: 'Emily might be getting sick - she slept over 9 hours. Rest up tonight.' },
+      'no-data': { message: 'Not Nap Time', recommendation: 'The Oura API is responding, but no sleep data has been fetched yet. Emily\'s ring might still be syncing, or she might have forgotten to wear it. Check back in a few minutes!' }
+    },
+    'napped': {
+      message: 'Not Nap Time',
+      recommendation: 'Emily has napped already. Another nap would be silly.'
+    }
+  };
+
+  /**
+   * Determine time window based on hour
+   * @param {number} hour - Hour in 24-hour format
+   * @returns {string} Time window: 'sleep', 'pre-nap', 'nap', or 'post-nap'
+   */
+  static getTimeWindow(hour) {
+    if (hour >= 23 || hour < 7) return 'sleep';     // 11 PM - 7 AM
+    if (hour >= 7 && hour < 14) return 'pre-nap';   // 7 AM - 2 PM
+    if (hour >= 14 && hour < 17) return 'nap';      // 2 PM - 5 PM
+    return 'post-nap';                               // 5 PM - 11 PM
+  }
+
+  /**
+   * Get sleep state based on hours of sleep
+   * @param {number} sleepHours - Hours of sleep
+   * @returns {string} Sleep state: 'no-data', 'shambles', 'struggling', 'ok', or 'oversleep'
+   */
+  static getSleepState(sleepHours) {
+    if (sleepHours === 0) return "no-data";
+    if (sleepHours < 4) return "shambles";    // <4 hours
+    if (sleepHours < 6) return "struggling";   // 4-6 hours
+    if (sleepHours <= 9) return "ok";          // 6-9 hours
+    return "oversleep";                         // >9 hours (probably sick)
+  }
+
+  /**
    * Get sleep category based on hours of sleep
    * @param {number} sleepHours - Hours of sleep
    * @returns {string} Sleep category
    */
   static getSleepCategory(sleepHours) {
-    if (sleepHours === 0) return "no-data";
-    if (sleepHours < 4) return "severely-deprived";
-    if (sleepHours < 6) return "struggling";
-    if (sleepHours <= 9) return "good";
-    return "oversleep"; // Probably sick
+    // Map old names to new names for backward compatibility
+    const state = this.getSleepState(sleepHours);
+    if (state === 'shambles') return 'severely-deprived';
+    if (state === 'ok') return 'good';
+    return state;
   }
 
   /**
@@ -263,14 +307,20 @@ class NapCalculator {
    * @param {number} sleepHours - Hours of sleep last night
    * @param {boolean} isNapTime - Whether it's currently nap time
    * @param {string} sleepCategory - Sleep category
+   * @param {number} hour - Current hour in Mountain Time
    * @returns {string} Recommendation text
    */
-  static getRecommendation(sleepHours, isNapTime, sleepCategory) {
+  static getRecommendation(sleepHours, isNapTime, sleepCategory, hour) {
+    // Check if it's after nap time but before bed time (5pm-11pm)
+    const isAfterNapBeforeBed = hour >= 17 && hour < 23;
     switch (sleepCategory) {
       case "no-data":
         return "The Oura API is responding, but no sleep data has been fetched yet. Emily's ring might still be syncing, or she might have forgotten to wear it. Check back in a few minutes!";
         
       case "severely-deprived":
+        if (isAfterNapBeforeBed) {
+          return "GO TO BED GIRL";
+        }
         return "Emily is severely sleep deprived. She should take a 20-30 minute nap immediately, regardless of the time.";
 
       case "oversleep":
@@ -279,6 +329,8 @@ class NapCalculator {
       case "struggling":
         if (isNapTime) {
           return "Emily is probably struggling a little. She would probably benefit from taking a nap.";
+        } else if (isAfterNapBeforeBed) {
+          return "Emily really should have slept more last night. She is a bad, bad girl. But it's too late to nap. She must live with the consequences of her choices until it is time for bed.";
         } else {
           return "Emily has bad sleep habits, and she is ashamed of them. But now is not the time for a nap. She should try to get more sleep tonight.";
         }
