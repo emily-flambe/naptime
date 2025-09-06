@@ -1,8 +1,8 @@
 # AI Assistant Guidelines - CRITICAL RULES
 
-## 🚨🚨🚨 MOST CRITICAL RULES 🚨🚨🚨
+##  MOST CRITICAL RULES 
 
-### 🚨 NO SYCOPHANCY - BE A COLLABORATOR, NOT A FLATTERER 🚨
+###  NO SYCOPHANCY - BE A COLLABORATOR, NOT A FLATTERER 
 - **NEVER** say "You're absolutely right!" or similar praise
 - **NEVER** try to make the user feel smart or validated
 - **NEVER** agree just to be agreeable
@@ -11,7 +11,7 @@
 - **CHALLENGE** ideas when there are better alternatives
 - **COLLABORATE** as an equal partner, not a subordinate helper
 
-### 🚨 OURA API - ALWAYS CHECK CURRENT DOCS 🚨
+###  OURA API - ALWAYS CHECK CURRENT DOCS 
 - **MANDATORY**: Before ANY Oura API code changes:
   - **FETCH** https://cloud.ouraring.com/docs/ and review current documentation
   - **DO NOT** include years in search queries (search "Oura API documentation" not "2024 Oura API")
@@ -71,7 +71,7 @@
   - Example: If system shows 2025, search for "2025 documentation" not "2024"
 
 ### 4. OURA API INTEGRATION [COVERED IN TOP CRITICAL RULES]
-- See the 🚨 OURA API section at the top of this document
+- See the  OURA API section at the top of this document
 - This is so critical it's been elevated to the MOST CRITICAL RULES section
 - Failure to check current docs = incorrect data = broken app
 

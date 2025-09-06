@@ -46,5 +46,5 @@ jobs:
             cat /tmp/results.json | jq .
             exit 1
           else
-            echo "✅ No verified secrets detected"
+            echo " No verified secrets detected"
           fi

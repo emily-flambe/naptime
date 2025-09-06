@@ -113,7 +113,7 @@ init: ## Interactive setup for environment configuration
 	echo "BACKEND_PORT=$$backend_port" >> .env; \
 	echo "FRONTEND_PORT=$$frontend_port" >> .env; \
 	echo ""; \
-	echo "$(GREEN)✓ Configuration saved to .env$(NC)"; \
+	echo "$(GREEN) Configuration saved to .env$(NC)"; \
 	echo ""; \
 	echo "$(BLUE)Your configuration:$(NC)"; \
 	echo "  Project ID: $$project_id"; \
@@ -142,7 +142,7 @@ install: ## Install all dependencies
 	@npm install
 	@echo "$(GREEN)Installing frontend dependencies...$(NC)"
 	@cd frontend && npm install
-	@echo "$(GREEN)✓ Dependencies installed$(NC)"
+	@echo "$(GREEN) Dependencies installed$(NC)"
 
 .PHONY: dev
 dev: ## Run both development servers with hot reload
@@ -158,7 +158,7 @@ dev: ## Run both development servers with hot reload
 		read answer; \
 		if [ "$$answer" != "n" ] && [ "$$answer" != "N" ]; then \
 			lsof -Pi :8080 -sTCP:LISTEN -t | xargs kill -9 2>/dev/null || true; \
-			echo "$(GREEN)✓ Killed process on port 8080$(NC)"; \
+			echo "$(GREEN) Killed process on port 8080$(NC)"; \
 			sleep 1; \
 		else \
 			echo "$(RED)Cannot start backend - port 8080 is in use$(NC)"; \
@@ -172,7 +172,7 @@ dev: ## Run both development servers with hot reload
 		read answer; \
 		if [ "$$answer" != "n" ] && [ "$$answer" != "N" ]; then \
 			lsof -Pi :5173 -sTCP:LISTEN -t | xargs kill -9 2>/dev/null || true; \
-			echo "$(GREEN)✓ Killed process on port 5173$(NC)"; \
+			echo "$(GREEN) Killed process on port 5173$(NC)"; \
 			sleep 1; \
 		else \
 			echo "$(RED)Cannot start frontend - port 5173 is in use$(NC)"; \
@@ -197,7 +197,7 @@ dev-frontend: ## Run frontend development server only
 		read answer; \
 		if [ "$$answer" != "n" ] && [ "$$answer" != "N" ]; then \
 			lsof -Pi :5173 -sTCP:LISTEN -t | xargs kill -9 2>/dev/null || true; \
-			echo "$(GREEN)✓ Killed process on port 5173$(NC)"; \
+			echo "$(GREEN) Killed process on port 5173$(NC)"; \
 			sleep 1; \
 		else \
 			echo "$(RED)Cannot start frontend - port 5173 is in use$(NC)"; \
@@ -222,7 +222,7 @@ dev-backend: ## Run backend development server only
 		read answer; \
 		if [ "$$answer" != "n" ] && [ "$$answer" != "N" ]; then \
 			lsof -Pi :8080 -sTCP:LISTEN -t | xargs kill -9 2>/dev/null || true; \
-			echo "$(GREEN)✓ Killed process on port 8080$(NC)"; \
+			echo "$(GREEN) Killed process on port 8080$(NC)"; \
 			sleep 1; \
 		else \
 			echo "$(RED)Cannot start backend - port 8080 is in use$(NC)"; \
@@ -262,7 +262,7 @@ build: ## Build Docker image for deployment
 		--build-arg GIT_COMMIT="$$GIT_COMMIT" \
 		--build-arg GIT_BRANCH="$$GIT_BRANCH" \
 		-t $(IMAGE_NAME) .
-	@echo "$(GREEN)✓ Build complete$(NC)"
+	@echo "$(GREEN) Build complete$(NC)"
 
 .PHONY: test
 test: ## Run all tests
@@ -274,7 +274,7 @@ test: ## Run all tests
 	else \
 		echo "$(YELLOW)No backend tests found$(NC)"; \
 	fi
-	@echo "$(GREEN)✓ Tests complete$(NC)"
+	@echo "$(GREEN) Tests complete$(NC)"
 
 .PHONY: lint
 lint: ## Run linters
@@ -288,7 +288,7 @@ lint: ## Run linters
 	else \
 		echo "$(YELLOW)flake8 not installed, skipping Python linting$(NC)"; \
 	fi
-	@echo "$(GREEN)✓ Linting complete$(NC)"
+	@echo "$(GREEN) Linting complete$(NC)"
 
 .PHONY: deploy
 deploy: build ## Deploy to Google Cloud Run
@@ -314,7 +314,7 @@ deploy: build ## Deploy to Google Cloud Run
 		--memory 512Mi \
 		--set-env-vars "NODE_ENV=production,OURA_API_TOKEN=$(OURA_API_TOKEN)" \
 		--project $(PROJECT_ID)
-	@echo "$(GREEN)✓ Deployment complete!$(NC)"
+	@echo "$(GREEN) Deployment complete!$(NC)"
 	@echo "$(GREEN)Service URL:$(NC)"
 	@gcloud run services describe $(SERVICE_NAME) \
 		--platform managed \
@@ -333,7 +333,7 @@ format: ## Format code for both frontend and backend
 		echo "$(YELLOW)black not installed, skipping Python formatting$(NC)"; \
 		echo "$(YELLOW)Install with: pip install black$(NC)"; \
 	fi
-	@echo "$(GREEN)✓ Formatting complete$(NC)"
+	@echo "$(GREEN) Formatting complete$(NC)"
 
 .PHONY: logs
 logs: ## View Cloud Run logs
@@ -435,7 +435,7 @@ clean: ## Clean build artifacts and caches
 	@echo "$(GREEN)Cleaning build artifacts...$(NC)"
 	@rm -rf frontend/dist frontend/node_modules/.vite
 	@rm -rf node_modules/.cache coverage
-	@echo "$(GREEN)✓ Clean complete$(NC)"
+	@echo "$(GREEN) Clean complete$(NC)"
 
 .PHONY: check-env
 check-env: ## Verify environment configuration
@@ -452,7 +452,7 @@ check-env: ## Verify environment configuration
 		echo "  Image: $(IMAGE_NAME)"; \
 		echo ""; \
 		if [ "$(PROJECT_ID)" = "your-project-id" ]; then \
-			echo "$(RED)⚠ Warning: Using default project ID. Run 'make init' to configure.$(NC)"; \
+			echo "$(RED) Warning: Using default project ID. Run 'make init' to configure.$(NC)"; \
 		fi; \
 	else \
 		echo "$(RED).env file not found$(NC)"; \
@@ -462,33 +462,33 @@ check-env: ## Verify environment configuration
 	@echo "$(YELLOW)System Check:$(NC)"
 	@echo -n "  Python: "; \
 	if [ -n "$(PYTHON)" ]; then \
-		echo "$(GREEN)✓$(NC) ($(PYTHON))"; \
+		echo "$(GREEN)$(NC) ($(PYTHON))"; \
 	else \
-		echo "$(RED)✗ Not found$(NC)"; \
+		echo "$(RED) Not found$(NC)"; \
 	fi
 	@echo -n "  pip: "; \
 	if [ -n "$(PIP)" ]; then \
-		echo "$(GREEN)✓$(NC) ($(PIP))"; \
+		echo "$(GREEN)$(NC) ($(PIP))"; \
 	else \
-		echo "$(YELLOW)⚠ Not found (will try python -m pip)$(NC)"; \
+		echo "$(YELLOW) Not found (will try python -m pip)$(NC)"; \
 	fi
 	@echo -n "  Node.js: "; \
 	if command -v node > /dev/null 2>&1; then \
-		echo "$(GREEN)✓$(NC) ($$(node --version))"; \
+		echo "$(GREEN)$(NC) ($$(node --version))"; \
 	else \
-		echo "$(RED)✗ Not found$(NC)"; \
+		echo "$(RED) Not found$(NC)"; \
 	fi
 	@echo -n "  Docker: "; \
 	if command -v docker > /dev/null 2>&1; then \
-		echo "$(GREEN)✓$(NC) ($$(docker --version | cut -d' ' -f3 | tr -d ','))"; \
+		echo "$(GREEN)$(NC) ($$(docker --version | cut -d' ' -f3 | tr -d ','))"; \
 	else \
-		echo "$(RED)✗ Not found$(NC)"; \
+		echo "$(RED) Not found$(NC)"; \
 	fi
 	@echo -n "  gcloud: "; \
 	if command -v gcloud > /dev/null 2>&1; then \
-		echo "$(GREEN)✓$(NC) ($$(gcloud --version | head -n1 | cut -d' ' -f4))"; \
+		echo "$(GREEN)$(NC) ($$(gcloud --version | head -n1 | cut -d' ' -f4))"; \
 	else \
-		echo "$(RED)✗ Not found$(NC)"; \
+		echo "$(RED) Not found$(NC)"; \
 	fi
 
 ################################################################################
@@ -497,7 +497,7 @@ check-env: ## Verify environment configuration
 
 .PHONY: scan-secrets
 scan-secrets: ## Scan repository for secrets using TruffleHog
-	@echo "$(BLUE)🔍 Scanning repository for secrets...$(NC)"
+	@echo "$(BLUE) Scanning repository for secrets...$(NC)"
 	@echo ""
 	@if command -v docker > /dev/null 2>&1; then \
 		docker run --rm -v "$$(pwd):/workdir" \
@@ -507,10 +507,10 @@ scan-secrets: ## Scan repository for secrets using TruffleHog
 			--no-update; \
 		if [ $$? -eq 0 ]; then \
 			echo ""; \
-			echo "$(GREEN)✅ No verified secrets detected$(NC)"; \
+			echo "$(GREEN) No verified secrets detected$(NC)"; \
 		else \
 			echo ""; \
-			echo "$(RED)⚠️  Secrets detected! Please review and remove them.$(NC)"; \
+			echo "$(RED)️  Secrets detected! Please review and remove them.$(NC)"; \
 			exit 1; \
 		fi; \
 	elif command -v trufflehog > /dev/null 2>&1; then \
@@ -519,10 +519,10 @@ scan-secrets: ## Scan repository for secrets using TruffleHog
 			--exclude-paths=.trufflehog-ignore; \
 		if [ $$? -eq 0 ]; then \
 			echo ""; \
-			echo "$(GREEN)✅ No verified secrets detected$(NC)"; \
+			echo "$(GREEN) No verified secrets detected$(NC)"; \
 		else \
 			echo ""; \
-			echo "$(RED)⚠️  Secrets detected! Please review and remove them.$(NC)"; \
+			echo "$(RED)️  Secrets detected! Please review and remove them.$(NC)"; \
 			exit 1; \
 		fi; \
 	else \
