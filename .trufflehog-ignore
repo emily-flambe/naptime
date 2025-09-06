@@ -6,22 +6,22 @@
 node_modules/
 coverage/
 .temp/
-*.min.js
-*.min.css
+.*\.min\.js$
+.*\.min\.css$
 dist/
 build/
 
 # Test files often have example keys
-*.test.js
-*.spec.js
-*.test.ts
-*.spec.ts
+.*\.test\.js$
+.*\.spec\.js$
+.*\.test\.ts$
+.*\.spec\.ts$
 __tests__/
 
 # Documentation might have example secrets
 docs/examples/
-*.example
-*.sample
+.*\.example$
+.*\.sample$
 .project/guidelines/
 
 # Package lock files
@@ -30,7 +30,7 @@ yarn.lock
 pnpm-lock.yaml
 
 # Generated files
-*.generated.*
+.*\.generated\..*$
 
 # Python virtual environments
 venv/
@@ -39,7 +39,7 @@ env/
 .env/
 backend/venv/
 __pycache__/
-*.pyc
+.*\.pyc$
 
 # IDE and OS files
 .DS_Store
