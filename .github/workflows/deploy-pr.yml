@@ -320,3 +320,102 @@ jobs:
           echo "- Deploy: ✅" >> $GITHUB_STEP_SUMMARY
           echo "- Tests: ✅" >> $GITHUB_STEP_SUMMARY
           echo "- Smoke Test: ✅" >> $GITHUB_STEP_SUMMARY
+
+  # Sixth: Cleanup preview environment when PR is closed
+  cleanup:
+    name: Cleanup Preview Environment
+    runs-on: ubuntu-latest
+    if: github.event.action == 'closed'
+    
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Google Cloud Authentication
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Delete preview service
+        id: cleanup
+        run: |
+          PREVIEW_NAME="${{ env.SERVICE_NAME }}-pr-${{ github.event.pull_request.number }}"
+          
+          echo "🧹 Cleaning up preview environment: ${PREVIEW_NAME}"
+          
+          # Check if service exists
+          if gcloud run services describe ${PREVIEW_NAME} \
+            --platform managed \
+            --region ${{ env.REGION }} \
+            --project ${{ env.PROJECT_ID }} \
+            &>/dev/null; then
+            
+            # Delete the service
+            gcloud run services delete ${PREVIEW_NAME} \
+              --platform managed \
+              --region ${{ env.REGION }} \
+              --project ${{ env.PROJECT_ID }} \
+              --quiet
+            
+            echo "✅ Deleted preview service: ${PREVIEW_NAME}" >> $GITHUB_STEP_SUMMARY
+            echo "cleanup_status=deleted" >> $GITHUB_OUTPUT
+          else
+            echo "ℹ️ Preview service ${PREVIEW_NAME} not found or already deleted" >> $GITHUB_STEP_SUMMARY
+            echo "cleanup_status=not_found" >> $GITHUB_OUTPUT
+          fi
+          
+          # Clean up container images
+          echo "🗑️ Cleaning up container images for ${PREVIEW_NAME}"
+          
+          IMAGE_PREFIX="${{ env.ARTIFACT_REGISTRY_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${PREVIEW_NAME}"
+          
+          # List and delete images
+          IMAGES=$(gcloud artifacts docker images list ${IMAGE_PREFIX} \
+            --include-tags \
+            --format="get(package)" \
+            2>/dev/null || echo "")
+          
+          if [ -n "$IMAGES" ]; then
+            for IMAGE in $IMAGES; do
+              echo "Deleting image: ${IMAGE}"
+              gcloud artifacts docker images delete "${IMAGE}" \
+                --quiet \
+                2>/dev/null || echo "Failed to delete ${IMAGE}"
+            done
+            echo "✅ Cleaned up container images" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "ℹ️ No container images found for cleanup" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Comment PR about cleanup
+        uses: actions/github-script@v7
+        if: steps.cleanup.outputs.cleanup_status == 'deleted'
+        with:
+          script: |
+            const body = `🧹 **Preview Environment Cleaned Up**
+            
+            The preview environment for this PR has been deleted.
+            
+            | Details | |
+            |---------|---------|
+            | Service | \`${{ env.SERVICE_NAME }}-pr-${{ github.event.pull_request.number }}\` |
+            | Status | ✅ Deleted |
+            | PR | #${{ github.event.pull_request.number }} |
+            `;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });

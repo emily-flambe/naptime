@@ -1,0 +1,213 @@
+name: Cleanup Orphaned Previews
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      days_old:
+        description: 'Delete previews older than N days'
+        required: false
+        default: '7'
+        type: string
+      dry_run:
+        description: 'Dry run mode (show what would be deleted)'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  SERVICE_NAME: ${{ secrets.GCP_SERVICE_NAME }}
+  REGION: us-central1
+  ARTIFACT_REGISTRY_LOCATION: us-central1
+  ARTIFACT_REGISTRY_REPO: cloud-run-apps
+
+jobs:
+  cleanup-orphaned:
+    name: Cleanup Orphaned Preview Environments
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+      issues: write  # To create issues if cleanup fails
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Google Cloud Authentication
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Find and cleanup orphaned previews
+        id: cleanup
+        run: |
+          # Configuration
+          DAYS_OLD=${{ inputs.days_old || '7' }}
+          DRY_RUN=${{ inputs.dry_run || 'false' }}
+          SERVICE_PREFIX="${{ env.SERVICE_NAME }}-pr-"
+          CLEANUP_COUNT=0
+          SKIP_COUNT=0
+          
+          echo "🔍 Scanning for orphaned preview environments older than $DAYS_OLD days..."
+          
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "🔵 DRY RUN MODE - No services will be deleted"
+          fi
+          
+          # Find all preview services
+          SERVICES=$(gcloud run services list \
+            --platform managed \
+            --region ${{ env.REGION }} \
+            --project ${{ env.PROJECT_ID }} \
+            --format="value(name)" | grep "^${SERVICE_PREFIX}" || true)
+          
+          if [ -z "$SERVICES" ]; then
+            echo "✅ No preview deployments found"
+            echo "cleanup_count=0" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Process each service
+          for SERVICE in $SERVICES; do
+            # Extract PR number from service name
+            PR_NUMBER=$(echo "$SERVICE" | sed "s/^${SERVICE_PREFIX}//")
+            
+            # Get service creation timestamp
+            CREATED=$(gcloud run services describe $SERVICE \
+              --platform managed \
+              --region ${{ env.REGION }} \
+              --project ${{ env.PROJECT_ID }} \
+              --format="value(metadata.creationTimestamp)" || echo "")
+            
+            if [ -z "$CREATED" ]; then
+              echo "⚠️ Could not get creation time for $SERVICE, skipping"
+              ((SKIP_COUNT++))
+              continue
+            fi
+            
+            # Calculate age in days
+            AGE_DAYS=$(( ($(date +%s) - $(date -d "$CREATED" +%s)) / 86400 ))
+            
+            echo "📊 Service: $SERVICE (PR #$PR_NUMBER) - Age: $AGE_DAYS days"
+            
+            # Check if service is old enough for cleanup
+            if [ $AGE_DAYS -gt $DAYS_OLD ]; then
+              if [ "$DRY_RUN" = "true" ]; then
+                echo "  🔵 [DRY RUN] Would delete $SERVICE"
+                ((CLEANUP_COUNT++))
+              else
+                # Check if PR is still open by querying GitHub API
+                PR_STATE=$(gh pr view $PR_NUMBER --json state --jq .state 2>/dev/null || echo "unknown")
+                
+                if [ "$PR_STATE" = "OPEN" ]; then
+                  echo "  ⏭️ Skipping $SERVICE - PR #$PR_NUMBER is still open"
+                  ((SKIP_COUNT++))
+                  continue
+                fi
+                
+                # Delete the service
+                echo "  🗑️ Deleting orphaned preview $SERVICE (PR #$PR_NUMBER - State: $PR_STATE)"
+                
+                if gcloud run services delete $SERVICE \
+                  --platform managed \
+                  --region ${{ env.REGION }} \
+                  --project ${{ env.PROJECT_ID }} \
+                  --quiet; then
+                  echo "  ✅ Deleted $SERVICE"
+                  ((CLEANUP_COUNT++))
+                  
+                  # Also clean up container images
+                  IMAGE_PREFIX="${{ env.ARTIFACT_REGISTRY_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${SERVICE}"
+                  echo "  🗑️ Cleaning up container images for $SERVICE"
+                  
+                  IMAGES=$(gcloud artifacts docker images list ${IMAGE_PREFIX} \
+                    --include-tags \
+                    --format="get(package)" \
+                    2>/dev/null || echo "")
+                  
+                  if [ -n "$IMAGES" ]; then
+                    for IMAGE in $IMAGES; do
+                      gcloud artifacts docker images delete "${IMAGE}" \
+                        --quiet \
+                        2>/dev/null || echo "  ⚠️ Failed to delete image: ${IMAGE}"
+                    done
+                  fi
+                else
+                  echo "  ❌ Failed to delete $SERVICE"
+                  ((SKIP_COUNT++))
+                fi
+              fi
+            else
+              echo "  ✅ Keeping $SERVICE - only $AGE_DAYS days old"
+              ((SKIP_COUNT++))
+            fi
+          done
+          
+          # Summary
+          echo ""
+          echo "📊 Cleanup Summary:"
+          echo "  - Services cleaned up: $CLEANUP_COUNT"
+          echo "  - Services skipped: $SKIP_COUNT"
+          echo "  - Total services processed: $((CLEANUP_COUNT + SKIP_COUNT))"
+          
+          # Set outputs
+          echo "cleanup_count=$CLEANUP_COUNT" >> $GITHUB_OUTPUT
+          echo "skip_count=$SKIP_COUNT" >> $GITHUB_OUTPUT
+          
+          # Add to job summary
+          echo "## 🧹 Orphaned Preview Cleanup Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Services Cleaned | $CLEANUP_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| Services Skipped | $SKIP_COUNT |" >> $GITHUB_STEP_SUMMARY
+          echo "| Total Processed | $((CLEANUP_COUNT + SKIP_COUNT)) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Settings:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Age threshold: $DAYS_OLD days" >> $GITHUB_STEP_SUMMARY
+          echo "- Dry run: $DRY_RUN" >> $GITHUB_STEP_SUMMARY
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Create issue if cleanup fails
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = '🚨 Orphaned Preview Cleanup Failed';
+            const body = `The scheduled cleanup of orphaned preview environments has failed.
+            
+            **Details:**
+            - Workflow: ${context.workflow}
+            - Run ID: ${context.runId}
+            - Run URL: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}
+            
+            Please investigate the failure and ensure preview environments are being properly cleaned up.`;
+            
+            // Check if issue already exists
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'cleanup-failure',
+              state: 'open'
+            });
+            
+            if (issues.data.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['cleanup-failure', 'automated']
+              });
+            }
