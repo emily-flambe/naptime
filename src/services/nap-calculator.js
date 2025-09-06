@@ -13,15 +13,15 @@ class NapCalculator {
     // Find the main sleep session for last night
     // Look for 'long_sleep' type on today's date (Oura assigns sleep to the day it ends)
     // IMPORTANT: Use Mountain Time for date, not UTC
-    const nowMT = new Date().toLocaleString("en-US", { 
+    const nowMT = new Date().toLocaleString("en-US", {
       timeZone: "America/Denver",
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     });
     // Convert MM/DD/YYYY to YYYY-MM-DD format
-    const [month, day, year] = nowMT.split('/');
-    const today = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    const [month, day, year] = nowMT.split("/");
+    const today = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
 
     // Check if there's been a nap today (sleep that started between 11am-7pm MT)
     const todayNap = sleepData?.data?.find((record) => {
@@ -29,13 +29,15 @@ class NapCalculator {
 
       // Parse the bedtime_start to check if it's during daytime (11am-7pm MT)
       const bedtimeStart = new Date(record.bedtime_start);
-      
+
       // Convert to Mountain Time to get the correct hour
-      const startHour = parseInt(bedtimeStart.toLocaleString("en-US", {
-        timeZone: "America/Denver",
-        hour: "2-digit",
-        hour12: false
-      }));
+      const startHour = parseInt(
+        bedtimeStart.toLocaleString("en-US", {
+          timeZone: "America/Denver",
+          hour: "2-digit",
+          hour12: false,
+        }),
+      );
 
       // A nap is sleep that starts between 11am (11:00) and 7pm (19:00)
       const isDaytimeNap = startHour >= 11 && startHour < 19;
@@ -70,6 +72,50 @@ class NapCalculator {
     const sleepSeconds = sleepRecord?.total_sleep_duration || 0;
     const sleepHours = sleepSeconds / 3600;
 
+    // Check if we have no data (0.0 hours of sleep)
+    const hasNoData = sleepSeconds === 0 || !sleepRecord;
+    if (hasNoData) {
+      // Get current time window for no-data message
+      const now = new Date();
+      const hour = parseInt(
+        now.toLocaleString("en-US", {
+          timeZone: "America/Denver",
+          hour: "2-digit",
+          hour12: false,
+        })
+      );
+      const timeWindow = this.getTimeWindow(hour);
+      const noDataConfig = this.MESSAGE_CONFIG[timeWindow]["no-data"];
+      
+      // Return special status when we have no data
+      return {
+        needsNap: false,
+        sleepHours: "0.0",
+        sleepScore: null,
+        sleepCategory: "no-data",
+        napPriority: "unknown",
+        quality: "Unknown",
+        isNapTime: timeWindow === 'nap',
+        isSleepTime: timeWindow === 'sleep',
+        currentTime: new Date().toLocaleString("en-US", {
+          timeZone: "America/Denver",
+          timeStyle: "short",
+        }),
+        lastUpdated: new Date().toISOString(),
+        message: noDataConfig.message,
+        shouldNap: false,
+        recommendation: noDataConfig.recommendation,
+        hasNappedToday: false,
+        details: {
+          totalSleepDurationSeconds: 0,
+          efficiency: null,
+          deepSleepMinutes: 0,
+          remSleepMinutes: 0,
+          lightSleepMinutes: 0,
+        },
+      };
+    }
+
     // Get readiness score (proxy for sleep quality in sleep sessions)
     const sleepScore = sleepRecord?.readiness?.score || null;
 
@@ -84,54 +130,39 @@ class NapCalculator {
     const hour = mountainTime.getHours();
 
     // Time windows in Mountain Time
-    const isNapTime = hour >= 14 && hour < 17; // 2:00 PM to 4:59 PM
-    const isSleepTime = hour >= 0 && hour < 8; // Midnight to 7:59 AM
+    const timeWindow = this.getTimeWindow(hour);
+    const isNapTime = timeWindow === "nap";
+    const isSleepTime = timeWindow === "sleep";
 
-    // Determine sleep category and nap need
-    const sleepCategory = this.getSleepCategory(sleepHours);
+    // Get sleep state and message configuration
+    const sleepState = this.getSleepState(sleepHours);
+    const sleepCategory = this.getSleepCategory(sleepHours); // For backward compatibility
+    const hasNappedToday = !!todayNap;
+
+    // Get message configuration
+    let messageConfig;
+    if (hasNappedToday) {
+      messageConfig = this.MESSAGE_CONFIG.napped;
+    } else {
+      messageConfig = this.MESSAGE_CONFIG[timeWindow][sleepState];
+    }
+
+    // Determine nap need based on configuration
     let needsNap = false;
-    let napPriority = "none"; // none, maybe, yes
-    let hasNappedToday = !!todayNap;
+    let napPriority = "none";
 
-    // If Emily has already napped today, she doesn't need another nap
-    if (hasNappedToday) {
-      needsNap = false;
-      napPriority = "none";
-    } else if (sleepHours < 4) {
-      // Severely sleep deprived - nap at any time
-      needsNap = true;
-      napPriority = "yes";
-    } else if (sleepHours > 9) {
-      // Probably sick - nap at any time
-      needsNap = true;
-      napPriority = "yes";
-    } else if (sleepHours >= 4 && sleepHours < 6) {
-      // Struggling - maybe nap during nap period
-      needsNap = isNapTime;
-      napPriority = isNapTime ? "maybe" : "none";
-    } else {
-      // Good sleep (6-9 hours) - never needs nap
-      needsNap = false;
-      napPriority = "none";
+    if (!hasNappedToday) {
+      if (sleepState === "shambles" || sleepState === "oversleep") {
+        needsNap = true;
+        napPriority = "yes";
+      } else if (sleepState === "struggling" && isNapTime) {
+        needsNap = true;
+        napPriority = "maybe";
+      }
     }
 
-    // Generate appropriate message
-    let message;
-    if (hasNappedToday) {
-      message = "Not Nap Time";
-    } else if (isSleepTime) {
-      message = "Sleep Time";
-    } else if (sleepHours < 4) {
-      message = "NAP TIME";
-    } else if (sleepHours > 9) {
-      message = "NAP TIME";
-    } else if (sleepHours >= 4 && sleepHours < 6 && isNapTime) {
-      message = "Maybe Nap Time";
-    } else if (sleepHours >= 4 && sleepHours < 6 && !isNapTime) {
-      message = "Not Nap Time";
-    } else {
-      message = "Not Nap Time";
-    }
+    const message = messageConfig.message;
+    const configRecommendation = messageConfig.recommendation;
 
     // Format current time for display
     const currentTime = now.toLocaleString("en-US", {
@@ -152,9 +183,7 @@ class NapCalculator {
       lastUpdated: new Date().toISOString(),
       message,
       shouldNap: needsNap,
-      recommendation: hasNappedToday
-        ? "Emily has napped already. Another nap would be silly."
-        : this.getRecommendation(sleepHours, isNapTime, sleepCategory),
+      recommendation: configRecommendation,
       hasNappedToday,
       details: {
         totalSleepDurationSeconds: sleepSeconds,
@@ -172,20 +201,6 @@ class NapCalculator {
     };
   }
 
-  /**
-   * Check if current time is within nap time window (2-5 PM MT)
-   * @returns {boolean} True if it's currently nap time
-   */
-  static isCurrentlyNapTime() {
-    const now = new Date();
-    const mountainTimeString = now.toLocaleString("en-US", {
-      timeZone: "America/Denver",
-    });
-    const mountainTime = new Date(mountainTimeString);
-    const hour = mountainTime.getHours();
-
-    return hour >= 14 && hour < 17;
-  }
 
   /**
    * Convert seconds to hours with decimal precision
@@ -212,48 +227,149 @@ class NapCalculator {
   }
 
   /**
+   * Configuration for messages based on time window and sleep state
+   */
+  static MESSAGE_CONFIG = {
+    sleep: {
+      shambles: {
+        message: "Sleep Time",
+        recommendation: "Emily should be asleep right now.",
+      },
+      struggling: {
+        message: "Sleep Time",
+        recommendation: "Emily should be asleep right now.",
+      },
+      ok: {
+        message: "Sleep Time",
+        recommendation: "Emily should be asleep right now.",
+      },
+      oversleep: {
+        message: "Sleep Time",
+        recommendation: "Emily should be asleep right now.",
+      },
+      "no-data": {
+        message: "Sleep Time",
+        recommendation: "Emily should be asleep right now.",
+      },
+    },
+    "pre-nap": {
+      shambles: {
+        message: "Not Nap Time",
+        recommendation:
+          "Emily is in shambles. She needs to survive until nap time at 2 PM.",
+      },
+      struggling: {
+        message: "Not Nap Time",
+        recommendation:
+          "Emily has bad sleep habits, and she is ashamed of them. But now is not the time for a nap. She should try to get more sleep tonight.",
+      },
+      ok: {
+        message: "Not Nap Time",
+        recommendation: "Emily got decent sleep. No nap needed yet.",
+      },
+      oversleep: {
+        message: "Not Nap Time",
+        recommendation: "Emily might be getting sick - she slept over 9 hours.",
+      },
+      "no-data": {
+        message: "Not Nap Time",
+        recommendation:
+          "The Oura API is responding, but no sleep data has been fetched yet. Emily's ring might still be syncing, or idk something dumb might have happened lmao",
+      },
+    },
+    nap: {
+      shambles: {
+        message: "NAP TIME",
+        recommendation:
+          "Emily is severely sleep deprived. She should take a nap RIGHT NOW. GO TO BED",
+      },
+      struggling: {
+        message: "Maybe Nap Time",
+        recommendation:
+          "Emily is probably struggling a little. She is probably considering a nap. Maybe you should, too.",
+      },
+      ok: {
+        message: "Not Nap Time",
+        recommendation:
+          "Emily doesn't NEED to nap. But it could be fun. You never know what might happen during a nap!",
+      },
+      oversleep: {
+        message: "NAP TIME",
+        recommendation:
+          "Emily slept more than 9 hours, which might indicate she's getting sick, because that is way too much sleep, yall are crazy",
+      },
+      "no-data": {
+        message: "Unknown",
+        recommendation:
+          "The Oura API is responding, but no sleep data has been fetched yet. Emily's ring might still be syncing, or idk something dumb might have happened lmao",
+      },
+    },
+    "post-nap": {
+      shambles: { message: "Not Nap Time", recommendation: "GO TO BED GIRL" },
+      struggling: {
+        message: "Not Nap Time",
+        recommendation:
+          "Emily really should have slept more last night. She is a bad, bad girl. But it's too late to nap. She must live with the consequences of her choices until it is time for bed.",
+      },
+      ok: {
+        message: "Not Nap Time",
+        recommendation: "Emily is OK. But it is not nap time.",
+      },
+      oversleep: {
+        message: "Not Nap Time",
+        recommendation:
+          "Emily might be getting sick - she slept over 9 hours. Who does that???",
+      },
+      "no-data": {
+        message: "Not Nap Time",
+        recommendation:
+          "The Oura API is responding, but no sleep data has been fetched yet. Emily's ring might still be syncing, or idk something dumb might have happened lmao",
+      },
+    },
+    napped: {
+      message: "Not Nap Time",
+      recommendation: "Emily has napped already. Another nap would be silly.",
+    },
+  };
+
+  /**
+   * Determine time window based on hour
+   * @param {number} hour - Hour in 24-hour format
+   * @returns {string} Time window: 'sleep', 'pre-nap', 'nap', or 'post-nap'
+   */
+  static getTimeWindow(hour) {
+    if (hour >= 23 || hour < 7) return "sleep"; // 11 PM - 7 AM
+    if (hour >= 7 && hour < 14) return "pre-nap"; // 7 AM - 2 PM
+    if (hour >= 14 && hour < 17) return "nap"; // 2 PM - 5 PM
+    return "post-nap"; // 5 PM - 11 PM
+  }
+
+  /**
+   * Get sleep state based on hours of sleep
+   * @param {number} sleepHours - Hours of sleep
+   * @returns {string} Sleep state: 'no-data', 'shambles', 'struggling', 'ok', or 'oversleep'
+   */
+  static getSleepState(sleepHours) {
+    if (sleepHours === 0) return "no-data";
+    if (sleepHours < 4) return "shambles"; // <4 hours
+    if (sleepHours < 6) return "struggling"; // 4-6 hours
+    if (sleepHours <= 9) return "ok"; // 6-9 hours
+    return "oversleep"; // >9 hours (probably sick)
+  }
+
+  /**
    * Get sleep category based on hours of sleep
    * @param {number} sleepHours - Hours of sleep
    * @returns {string} Sleep category
    */
   static getSleepCategory(sleepHours) {
-    if (sleepHours < 4) return "severely-deprived";
-    if (sleepHours < 6) return "struggling";
-    if (sleepHours <= 9) return "good";
-    return "oversleep"; // Probably sick
+    // Map old names to new names for backward compatibility
+    const state = this.getSleepState(sleepHours);
+    if (state === "shambles") return "severely-deprived";
+    if (state === "ok") return "good";
+    return state;
   }
 
-  /**
-   * Get personalized nap recommendation
-   * @param {number} sleepHours - Hours of sleep last night
-   * @param {boolean} isNapTime - Whether it's currently nap time
-   * @param {string} sleepCategory - Sleep category
-   * @returns {string} Recommendation text
-   */
-  static getRecommendation(sleepHours, isNapTime, sleepCategory) {
-    switch (sleepCategory) {
-      case "severely-deprived":
-        return "Emily is severely sleep deprived. She should take a 20-30 minute nap immediately, regardless of the time.";
-
-      case "oversleep":
-        return "Emily slept more than 9 hours, which might indicate she's getting sick. A nap could help her recover.";
-
-      case "struggling":
-        if (isNapTime) {
-          return "Emily is probably struggling a little. She would probably benefit from taking a nap.";
-        } else {
-          return "Emily has bad sleep habits, and she is ashamed of them. But now is not the time for a nap. She should try to get more sleep tonight.";
-        }
-
-      case "good":
-      default:
-        if (sleepHours < 7) {
-          return "Emily got decent sleep, but could benefit from 30-60 more minutes tonight.";
-        } else {
-          return "Great sleep! Emily should have good energy throughout the day.";
-        }
-    }
-  }
 
   /**
    * Get current Mountain Time information
@@ -276,7 +392,7 @@ class NapCalculator {
       fullFormatted: now.toLocaleString("en-US", {
         timeZone: "America/Denver",
       }),
-      isNapTime: this.isCurrentlyNapTime(),
+      isNapTime: this.getTimeWindow(mountainTime.getHours()) === 'nap',
     };
   }
 

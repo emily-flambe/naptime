@@ -47,6 +47,10 @@ help: ## Show available commands
 	@echo "  $(GREEN)make format$(NC)       - Format code (frontend and backend)"
 	@echo "  $(GREEN)make test$(NC)         - Run all tests"
 	@echo ""
+	@echo "$(GREEN)Security:$(NC)"
+	@echo "  $(GREEN)make scan-secrets$(NC) - Scan repository for secrets with TruffleHog"
+	@echo "  $(GREEN)make setup-secrets-scanning$(NC) - Set up TruffleHog pre-commit hooks"
+	@echo ""
 	@echo "$(GREEN)Deployment:$(NC)"
 	@echo "  $(GREEN)make build$(NC)        - Build Docker image for deployment"
 	@echo "  $(GREEN)make deploy$(NC)       - Deploy to Google Cloud Run"
@@ -485,6 +489,64 @@ check-env: ## Verify environment configuration
 		echo "$(GREEN)✓$(NC) ($$(gcloud --version | head -n1 | cut -d' ' -f4))"; \
 	else \
 		echo "$(RED)✗ Not found$(NC)"; \
+	fi
+
+################################################################################
+# Security & Secret Scanning
+################################################################################
+
+.PHONY: scan-secrets
+scan-secrets: ## Scan repository for secrets using TruffleHog
+	@echo "$(BLUE)🔍 Scanning repository for secrets...$(NC)"
+	@echo ""
+	@if command -v docker > /dev/null 2>&1; then \
+		docker run --rm -v "$$(pwd):/workdir" \
+			trufflesecurity/trufflehog:latest \
+			filesystem /workdir \
+			--results=verified \
+			--no-update; \
+		if [ $$? -eq 0 ]; then \
+			echo ""; \
+			echo "$(GREEN)✅ No verified secrets detected$(NC)"; \
+		else \
+			echo ""; \
+			echo "$(RED)⚠️  Secrets detected! Please review and remove them.$(NC)"; \
+			exit 1; \
+		fi; \
+	elif command -v trufflehog > /dev/null 2>&1; then \
+		trufflehog filesystem . \
+			--results=verified \
+			--exclude-paths=.trufflehog-ignore; \
+		if [ $$? -eq 0 ]; then \
+			echo ""; \
+			echo "$(GREEN)✅ No verified secrets detected$(NC)"; \
+		else \
+			echo ""; \
+			echo "$(RED)⚠️  Secrets detected! Please review and remove them.$(NC)"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "$(RED)Error: TruffleHog is not installed$(NC)"; \
+		echo ""; \
+		echo "Install using one of these methods:"; \
+		echo "  1. Docker: docker pull trufflesecurity/trufflehog:latest"; \
+		echo "  2. Homebrew: brew install trufflehog"; \
+		echo "  3. Run: make setup-secrets-scanning"; \
+		exit 1; \
+	fi
+
+.PHONY: setup-secrets-scanning
+setup-secrets-scanning: ## Set up TruffleHog pre-commit hooks for secret detection
+	@if [ -f "scripts/setup-trufflehog.sh" ]; then \
+		./scripts/setup-trufflehog.sh; \
+	else \
+		echo "$(RED)Setup script not found$(NC)"; \
+		echo "Creating setup script..."; \
+		mkdir -p scripts; \
+		echo "#!/bin/bash" > scripts/setup-trufflehog.sh; \
+		echo "git config core.hooksPath .githooks" >> scripts/setup-trufflehog.sh; \
+		chmod +x scripts/setup-trufflehog.sh; \
+		./scripts/setup-trufflehog.sh; \
 	fi
 
 # Default target
