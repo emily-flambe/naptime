@@ -1,0 +1,50 @@
+name: TruffleHog Secret Scan
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  trufflehog:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Run TruffleHog
+        run: |
+          # Install TruffleHog
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh | sh -s -- -b /usr/local/bin
+          
+          # For PRs, scan only the commits in the PR
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "Scanning PR commits from ${{ github.event.pull_request.base.sha }} to ${{ github.event.pull_request.head.sha }}"
+            git diff ${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }} --name-only --diff-filter=d | \
+            grep -v -E "(node_modules/|venv/|\.venv/|__pycache__|\.pyc$|package-lock\.json|yarn\.lock)" | \
+            xargs -I {} trufflehog filesystem {} --only-verified --json 2>/dev/null | \
+            jq -r 'select(.Verified == true)' > /tmp/results.json || true
+          else
+            # For pushes, scan only changed files
+            echo "Scanning changed files in push"
+            git diff HEAD~1...HEAD --name-only --diff-filter=d | \
+            grep -v -E "(node_modules/|venv/|\.venv/|__pycache__|\.pyc$|package-lock\.json|yarn\.lock)" | \
+            xargs -I {} trufflehog filesystem {} --only-verified --json 2>/dev/null | \
+            jq -r 'select(.Verified == true)' > /tmp/results.json || true
+          fi
+          
+          # Check if any verified secrets were found
+          if [ -s /tmp/results.json ]; then
+            echo "::error::Verified secrets detected!"
+            cat /tmp/results.json | jq .
+            exit 1
+          else
+            echo "✅ No verified secrets detected"
+          fi
