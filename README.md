@@ -19,6 +19,20 @@ did I FUCKING stutter
 - **Testing**: Jest with comprehensive test coverage
 - **Deployment**: Google Cloud Run (containerized)
 
+## Security
+
+This project uses **TruffleHog** to prevent secrets from being committed to the repository. TruffleHog scans for API keys, tokens, and other sensitive data before commits and during CI/CD.
+
+### Quick Security Setup
+
+```bash
+# Set up pre-commit hooks for secret scanning
+make setup-secrets-scanning
+
+# Manually scan repository for secrets
+make scan-secrets
+```
+
 ## Quick Start
 
 ### Prerequisites
@@ -26,6 +40,7 @@ did I FUCKING stutter
 - Node.js 20+
 - Oura Ring account with API token
 - Google Cloud account (for deployment)
+- Docker (optional, for TruffleHog secret scanning)
 
 ### Installation
 
@@ -33,6 +48,9 @@ did I FUCKING stutter
 git clone https://github.com/emily-flambe/naptime.git
 cd naptime
 npm install
+
+# Set up secret scanning (recommended)
+make setup-secrets-scanning
 ```
 
 ### Environment Setup
