@@ -25,9 +25,6 @@ function logWithTimestamp(level, message, data = null) {
   
   const logMessage = `[${timestamp}] [MT: ${mountainTime}] [${level.toUpperCase()}] ${message}`;
   
-  // TEMPORARY TEST: This should fail CI 🚀
-  console.log("Testing emoji detection in CI 🔥");
-  
   if (data) {
     console.log(logMessage, data);
   } else {
