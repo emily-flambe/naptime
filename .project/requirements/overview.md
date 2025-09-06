@@ -127,7 +127,7 @@ Provide developers with a **production-ready foundation** that includes:
 
 ## Implementation Status
 
-### ✅ Completed
+###  Completed
 - Project structure and setup
 - FastAPI backend with health checks
 - React frontend with TypeScript
@@ -138,7 +138,7 @@ Provide developers with a **production-ready foundation** that includes:
 - Interactive setup (`make init`)
 - PR preview environments
 
-### 🚧 Future Enhancements
+###  Future Enhancements
 - Database integration (Cloud SQL or Firestore)
 - Authentication system (Firebase Auth or Cloud Identity)
 - Tailwind CSS styling

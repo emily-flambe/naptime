@@ -38,7 +38,7 @@ jobs:
       - name: Build Docker image
         run: |
           docker build --platform linux/amd64 -t test-build .
-          echo "✅ Docker image built successfully"
+          echo " Docker image built successfully"
 
   # Second: Deploy preview environment
   deploy:
@@ -122,14 +122,14 @@ jobs:
           
           echo "service_url=${SERVICE_URL}" >> $GITHUB_OUTPUT
           echo "service_name=${PREVIEW_NAME}" >> $GITHUB_OUTPUT
-          echo "🚀 Deployed to: ${SERVICE_URL}" >> $GITHUB_STEP_SUMMARY
+          echo " Deployed to: ${SERVICE_URL}" >> $GITHUB_STEP_SUMMARY
 
       - name: Comment PR with preview URL
         uses: actions/github-script@v7
         with:
           script: |
             const url = '${{ steps.deploy.outputs.service_url }}';
-            const body = `🚀 **Preview Environment Ready!**
+            const body = ` **Preview Environment Ready!**
             
             Your changes have been deployed to: ${url}
             
@@ -273,13 +273,13 @@ jobs:
           if [ -n "$SERVICE_URL" ]; then
             # Test health endpoint
             curl -f ${SERVICE_URL}/api/health || exit 1
-            echo "✅ Health check passed for $SERVICE_URL" >> $GITHUB_STEP_SUMMARY
+            echo " Health check passed for $SERVICE_URL" >> $GITHUB_STEP_SUMMARY
             
             # Test main endpoint
             curl -f ${SERVICE_URL}/api/hello || exit 1
-            echo "✅ API check passed for $SERVICE_URL" >> $GITHUB_STEP_SUMMARY
+            echo " API check passed for $SERVICE_URL" >> $GITHUB_STEP_SUMMARY
           else
-            echo "⚠️ No service URL available for testing" >> $GITHUB_STEP_SUMMARY
+            echo "️ No service URL available for testing" >> $GITHUB_STEP_SUMMARY
           fi
 
   # Fifth: Final CI status check (required for PR merge)
@@ -294,29 +294,29 @@ jobs:
         run: |
           # This job succeeds only if all required jobs succeed
           if [[ "${{ needs.build.result }}" != "success" ]]; then
-            echo "❌ Build failed"
+            echo " Build failed"
             exit 1
           fi
           
           if [[ "${{ needs.deploy.result }}" != "success" ]]; then
-            echo "❌ Deploy failed"
+            echo " Deploy failed"
             exit 1
           fi
           
           if [[ "${{ needs.test-and-validate.result }}" != "success" ]]; then
-            echo "❌ Tests and validation failed"
+            echo " Tests and validation failed"
             exit 1
           fi
           
           if [[ "${{ needs.smoke-test.result }}" != "success" ]]; then
-            echo "❌ Smoke test failed"
+            echo " Smoke test failed"
             exit 1
           fi
           
-          echo "✅ All CI checks passed successfully!"
-          echo "## CI Status: ✅ PASSED" >> $GITHUB_STEP_SUMMARY
+          echo " All CI checks passed successfully!"
+          echo "## CI Status:  PASSED" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- Build: ✅" >> $GITHUB_STEP_SUMMARY
-          echo "- Deploy: ✅" >> $GITHUB_STEP_SUMMARY
-          echo "- Tests: ✅" >> $GITHUB_STEP_SUMMARY
-          echo "- Smoke Test: ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- Build: " >> $GITHUB_STEP_SUMMARY
+          echo "- Deploy: " >> $GITHUB_STEP_SUMMARY
+          echo "- Tests: " >> $GITHUB_STEP_SUMMARY
+          echo "- Smoke Test: " >> $GITHUB_STEP_SUMMARY

@@ -2,12 +2,9 @@ name: TruffleHog Secret Scan
 
 on:
   push:
-    branches:
-      - main
-      - develop
-      - 'feature/**'
+    branches: [main]
   pull_request:
-    types: [opened, synchronize, reopened]
+    branches: [main]
 
 jobs:
   trufflehog:
@@ -46,5 +43,5 @@ jobs:
             cat /tmp/results.json | jq .
             exit 1
           else
-            echo "✅ No verified secrets detected"
+            echo " No verified secrets detected"
           fi

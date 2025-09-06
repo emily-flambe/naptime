@@ -11,7 +11,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo "${BLUE}🔧 Setting up TruffleHog secret detection...${NC}"
+echo "${BLUE} Setting up TruffleHog secret detection...${NC}"
 echo ""
 
 # Function to check if a command exists
@@ -23,15 +23,15 @@ command_exists() {
 TRUFFLEHOG_AVAILABLE=false
 
 if command_exists docker; then
-    echo "${GREEN}✓${NC} Docker is installed"
+    echo "${GREEN}${NC} Docker is installed"
     echo "  Pulling TruffleHog Docker image..."
     docker pull trufflesecurity/trufflehog:latest
     TRUFFLEHOG_AVAILABLE=true
 elif command_exists trufflehog; then
-    echo "${GREEN}✓${NC} TruffleHog is installed natively"
+    echo "${GREEN}${NC} TruffleHog is installed natively"
     TRUFFLEHOG_AVAILABLE=true
 else
-    echo "${YELLOW}⚠️  Neither Docker nor TruffleHog is installed${NC}"
+    echo "${YELLOW}️  Neither Docker nor TruffleHog is installed${NC}"
     echo ""
     echo "Please install one of the following:"
     echo ""
@@ -58,18 +58,18 @@ echo "${BLUE}Configuring Git hooks...${NC}"
 if [ -d ".githooks" ]; then
     # Configure git to use our hooks directory
     git config core.hooksPath .githooks
-    echo "${GREEN}✓${NC} Git hooks configured to use .githooks directory"
+    echo "${GREEN}${NC} Git hooks configured to use .githooks directory"
     
     # Make sure the pre-commit hook is executable
     if [ -f ".githooks/pre-commit" ]; then
         chmod +x .githooks/pre-commit
-        echo "${GREEN}✓${NC} Pre-commit hook is executable"
+        echo "${GREEN}${NC} Pre-commit hook is executable"
     else
-        echo "${RED}✗${NC} Pre-commit hook not found at .githooks/pre-commit"
+        echo "${RED}${NC} Pre-commit hook not found at .githooks/pre-commit"
         exit 1
     fi
 else
-    echo "${RED}✗${NC} .githooks directory not found"
+    echo "${RED}${NC} .githooks directory not found"
     echo "  Creating hooks directory and copying template..."
     mkdir -p .githooks
     
@@ -105,13 +105,13 @@ if [ "$TRUFFLEHOG_AVAILABLE" = true ]; then
     fi
     
     rm "$TEMP_FILE"
-    echo "${GREEN}✓${NC} TruffleHog test completed successfully"
+    echo "${GREEN}${NC} TruffleHog test completed successfully"
 fi
 
 # Summary
 echo ""
 echo "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo "${GREEN}✅ Setup complete!${NC}"
+echo "${GREEN} Setup complete!${NC}"
 echo "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 echo "TruffleHog will now scan for secrets:"
