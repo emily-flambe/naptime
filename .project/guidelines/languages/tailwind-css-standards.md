@@ -50,7 +50,7 @@ Follow this consistent order for utility classes:
 For elements with many classes, break into logical groups:
 
 ```html
-<!-- ✅ Good: Logical grouping -->
+<!--  Good: Logical grouping -->
 <button class="
   inline-flex items-center justify-center
   px-4 py-2
@@ -60,7 +60,7 @@ For elements with many classes, break into logical groups:
   disabled:opacity-50 disabled:cursor-not-allowed
 ">
 
-<!-- ❌ Bad: Single long line -->
+<!--  Bad: Single long line -->
 <button class="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 disabled:opacity-50 disabled:cursor-not-allowed">
 ```
 
@@ -70,7 +70,7 @@ For elements with many classes, break into logical groups:
 When patterns repeat 3+ times, extract them:
 
 ```css
-/* ✅ Good: Extract repeated patterns */
+/*  Good: Extract repeated patterns */
 @layer components {
   .btn-primary {
     @apply px-4 py-2 font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2;
@@ -88,12 +88,12 @@ When patterns repeat 3+ times, extract them:
 - Keep specificity low
 
 ```css
-/* ✅ Good */
+/*  Good */
 .btn-primary { }
 .card-header { }
 .input-error { }
 
-/* ❌ Bad */
+/*  Bad */
 .blue-button { }
 .myCard { }
 .error { }
@@ -105,10 +105,10 @@ When patterns repeat 3+ times, extract them:
 Always start with mobile styles, then add larger breakpoints:
 
 ```html
-<!-- ✅ Good: Mobile-first -->
+<!--  Good: Mobile-first -->
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
 
-<!-- ❌ Bad: Desktop-first -->
+<!--  Bad: Desktop-first -->
 <div class="grid grid-cols-3 md:grid-cols-2 sm:grid-cols-1">
 ```
 
@@ -127,10 +127,10 @@ Only use breakpoints when layout actually needs to change.
 Use sparingly and only when necessary:
 
 ```html
-<!-- ✅ Good: Use for specific, one-off needs -->
+<!--  Good: Use for specific, one-off needs -->
 <div class="top-[117px]"> <!-- Specific positioning requirement -->
 
-<!-- ❌ Bad: Use standard utilities when available -->
+<!--  Bad: Use standard utilities when available -->
 <div class="w-[50%]"> <!-- Use w-1/2 instead -->
 ```
 
@@ -197,10 +197,10 @@ module.exports = {
 
 ### 7.2 Avoid Dynamic Class Names
 ```javascript
-// ❌ Bad: PurgeCSS can't detect this
+//  Bad: PurgeCSS can't detect this
 const getButtonClass = (color) => `bg-${color}-500`
 
-// ✅ Good: Use complete class names
+//  Good: Use complete class names
 const getButtonClass = (color) => {
   const colors = {
     red: 'bg-red-500',
@@ -276,12 +276,12 @@ Always provide clear focus indicators:
 - [ ] Classes are formatted with Prettier
 
 ### Red Flags to Avoid
-- ❌ Inline styles when Tailwind utilities exist
-- ❌ !important overrides
-- ❌ Deeply nested arbitrary values
-- ❌ Mixing Tailwind with other CSS frameworks
-- ❌ Using @apply for single utilities
-- ❌ Dynamic class string concatenation
+-  Inline styles when Tailwind utilities exist
+-  !important overrides
+-  Deeply nested arbitrary values
+-  Mixing Tailwind with other CSS frameworks
+-  Using @apply for single utilities
+-  Dynamic class string concatenation
 
 ## 11. Team Conventions
 

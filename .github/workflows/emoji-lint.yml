@@ -1,0 +1,22 @@
+name: Emoji Linter
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  emoji-lint:
+    name: Check for emojis in codebase
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Run emoji linter
+        uses: emily-flambe/emoji-linter@v1
+        with:
+          # Use the config file in this repo
+          config-file: '.emoji-linter.config.json'
+          mode: 'check'
+          show-files: 'true'

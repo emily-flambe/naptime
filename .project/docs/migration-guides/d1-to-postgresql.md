@@ -483,10 +483,10 @@ const now = Math.floor(Date.now() / 1000);
 
 **Cloudflare Workers**: Must use HTTP-based drivers
 ```typescript
-// ✅ Good - HTTP-based
+//  Good - HTTP-based
 import { neon } from '@neondatabase/serverless';
 
-// ❌ Bad - Needs persistent connection
+//  Bad - Needs persistent connection
 import { Pool } from 'pg';  // Won't work in Workers!
 ```
 
@@ -548,14 +548,14 @@ async function testConnection() {
   try {
     // Test connection
     const [time] = await sql`SELECT NOW() as current_time`;
-    console.log('✅ Connected to PostgreSQL:', time);
+    console.log(' Connected to PostgreSQL:', time);
     
     // Test todos table
     const todos = await sql`SELECT COUNT(*) as count FROM todos`;
-    console.log('📊 Todos count:', todos[0].count);
+    console.log(' Todos count:', todos[0].count);
     
   } catch (error) {
-    console.error('❌ Connection failed:', error);
+    console.error(' Connection failed:', error);
   }
 }
 

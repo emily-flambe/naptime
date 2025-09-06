@@ -53,12 +53,12 @@ npx tsx check-styles.ts
 
 **Output Example:**
 ```
-🔍 Trying http://localhost:5177...
-✅ Connected to port 5177
-📸 Screenshot saved as style-check.png
+ Trying http://localhost:5177...
+ Connected to port 5177
+ Screenshot saved as style-check.png
 H1 classes: text-4xl font-bold text-gray-900 dark:text-white mb-2
 H1 computed styles: { fontSize: '36px', fontWeight: '700', ... }
-Tailwind detected: ✅ Yes
+Tailwind detected:  Yes
 ```
 
 ### 2. Manual Debugging Script (`debug.ts`)
@@ -308,7 +308,7 @@ Playwright scripts can be integrated into CI/CD pipelines for automated checking
 
 ## When to Use Playwright for Debugging
 
-✅ **Good Use Cases:**
+ **Good Use Cases:**
 - Visual issues (styling, layout)
 - CORS and API communication problems
 - Cross-browser compatibility
@@ -316,7 +316,7 @@ Playwright scripts can be integrated into CI/CD pipelines for automated checking
 - User interaction problems
 - Console errors that only appear in browser
 
-❌ **When NOT to Use:**
+ **When NOT to Use:**
 - Unit testing (use Jest/Vitest)
 - Simple API testing (use curl/Postman)
 - Backend-only issues
