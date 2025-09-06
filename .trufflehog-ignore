@@ -1,0 +1,46 @@
+# TruffleHog Ignore File
+# Add paths and patterns to ignore false positives
+# One pattern per line
+
+# Common false positive directories
+node_modules/
+coverage/
+.temp/
+*.min.js
+*.min.css
+dist/
+build/
+
+# Test files often have example keys
+*.test.js
+*.spec.js
+*.test.ts
+*.spec.ts
+__tests__/
+
+# Documentation might have example secrets
+docs/examples/
+*.example
+*.sample
+
+# Package lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Generated files
+*.generated.*
+
+# Python virtual environments
+venv/
+.venv/
+env/
+.env/
+backend/venv/
+__pycache__/
+*.pyc
+
+# IDE and OS files
+.DS_Store
+.idea/
+.vscode/
