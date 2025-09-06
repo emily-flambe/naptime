@@ -13,15 +13,15 @@ class NapCalculator {
     // Find the main sleep session for last night
     // Look for 'long_sleep' type on today's date (Oura assigns sleep to the day it ends)
     // IMPORTANT: Use Mountain Time for date, not UTC
-    const nowMT = new Date().toLocaleString("en-US", { 
+    const nowMT = new Date().toLocaleString("en-US", {
       timeZone: "America/Denver",
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
     });
     // Convert MM/DD/YYYY to YYYY-MM-DD format
-    const [month, day, year] = nowMT.split('/');
-    const today = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    const [month, day, year] = nowMT.split("/");
+    const today = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
 
     // Check if there's been a nap today (sleep that started between 11am-7pm MT)
     const todayNap = sleepData?.data?.find((record) => {
@@ -29,13 +29,15 @@ class NapCalculator {
 
       // Parse the bedtime_start to check if it's during daytime (11am-7pm MT)
       const bedtimeStart = new Date(record.bedtime_start);
-      
+
       // Convert to Mountain Time to get the correct hour
-      const startHour = parseInt(bedtimeStart.toLocaleString("en-US", {
-        timeZone: "America/Denver",
-        hour: "2-digit",
-        hour12: false
-      }));
+      const startHour = parseInt(
+        bedtimeStart.toLocaleString("en-US", {
+          timeZone: "America/Denver",
+          hour: "2-digit",
+          hour12: false,
+        }),
+      );
 
       // A nap is sleep that starts between 11am (11:00) and 7pm (19:00)
       const isDaytimeNap = startHour >= 11 && startHour < 19;
@@ -90,7 +92,8 @@ class NapCalculator {
         lastUpdated: new Date().toISOString(),
         message: "idk lol",
         shouldNap: false,
-        recommendation: "The Oura API is responding, but no sleep data has been fetched yet. Emily's ring might still be syncing, or she might have forgotten to wear it. Check back in a few minutes!",
+        recommendation:
+          "The Oura API is responding, but no sleep data has been fetched yet. Emily's ring might still be syncing, or she might have forgotten to wear it. Check back in a few minutes!",
         hasNappedToday: false,
         details: {
           totalSleepDurationSeconds: 0,
@@ -117,8 +120,8 @@ class NapCalculator {
 
     // Time windows in Mountain Time
     const timeWindow = this.getTimeWindow(hour);
-    const isNapTime = timeWindow === 'nap';
-    const isSleepTime = timeWindow === 'sleep';
+    const isNapTime = timeWindow === "nap";
+    const isSleepTime = timeWindow === "sleep";
 
     // Get sleep state and message configuration
     const sleepState = this.getSleepState(sleepHours);
@@ -136,12 +139,12 @@ class NapCalculator {
     // Determine nap need based on configuration
     let needsNap = false;
     let napPriority = "none";
-    
+
     if (!hasNappedToday) {
-      if (sleepState === 'shambles' || sleepState === 'oversleep') {
+      if (sleepState === "shambles" || sleepState === "oversleep") {
         needsNap = true;
         napPriority = "yes";
-      } else if (sleepState === 'struggling' && isNapTime) {
+      } else if (sleepState === "struggling" && isNapTime) {
         needsNap = true;
         napPriority = "maybe";
       }
@@ -230,38 +233,106 @@ class NapCalculator {
    * Configuration for messages based on time window and sleep state
    */
   static MESSAGE_CONFIG = {
-    'sleep': {
-      'shambles': { message: 'Sleep Time', recommendation: 'Emily should be asleep right now.' },
-      'struggling': { message: 'Sleep Time', recommendation: 'Emily should be asleep right now.' },
-      'ok': { message: 'Sleep Time', recommendation: 'Emily should be asleep right now.' },
-      'oversleep': { message: 'Sleep Time', recommendation: 'Emily should be asleep right now.' },
-      'no-data': { message: 'Sleep Time', recommendation: 'Emily should be asleep right now.' }
+    sleep: {
+      shambles: {
+        message: "Sleep Time",
+        recommendation: "Emily should be asleep right now.",
+      },
+      struggling: {
+        message: "Sleep Time",
+        recommendation: "Emily should be asleep right now.",
+      },
+      ok: {
+        message: "Sleep Time",
+        recommendation: "Emily should be asleep right now.",
+      },
+      oversleep: {
+        message: "Sleep Time",
+        recommendation: "Emily should be asleep right now.",
+      },
+      "no-data": {
+        message: "Sleep Time",
+        recommendation: "Emily should be asleep right now.",
+      },
     },
-    'pre-nap': {
-      'shambles': { message: 'Not Nap Time', recommendation: 'Emily is in shambles. She needs to survive until nap time at 2 PM.' },
-      'struggling': { message: 'Not Nap Time', recommendation: 'Emily has bad sleep habits, and she is ashamed of them. But now is not the time for a nap. She should try to get more sleep tonight.' },
-      'ok': { message: 'Not Nap Time', recommendation: 'Emily got decent sleep. No nap needed yet.' },
-      'oversleep': { message: 'Not Nap Time', recommendation: 'Emily might be getting sick - she slept over 9 hours.' },
-      'no-data': { message: 'Not Nap Time', recommendation: 'The Oura API is responding, but no sleep data has been fetched yet. Emily\'s ring might still be syncing, or idk something dumb might have happened lmao' }
+    "pre-nap": {
+      shambles: {
+        message: "Not Nap Time",
+        recommendation:
+          "Emily is in shambles. She needs to survive until nap time at 2 PM.",
+      },
+      struggling: {
+        message: "Not Nap Time",
+        recommendation:
+          "Emily has bad sleep habits, and she is ashamed of them. But now is not the time for a nap. She should try to get more sleep tonight.",
+      },
+      ok: {
+        message: "Not Nap Time",
+        recommendation: "Emily got decent sleep. No nap needed yet.",
+      },
+      oversleep: {
+        message: "Not Nap Time",
+        recommendation: "Emily might be getting sick - she slept over 9 hours.",
+      },
+      "no-data": {
+        message: "Not Nap Time",
+        recommendation:
+          "The Oura API is responding, but no sleep data has been fetched yet. Emily's ring might still be syncing, or idk something dumb might have happened lmao",
+      },
     },
-    'nap': {
-      'shambles': { message: 'NAP TIME', recommendation: 'Emily is severely sleep deprived. She should take a 20-30 minute nap immediately, regardless of the time.' },
-      'struggling': { message: 'Maybe Nap Time', recommendation: 'Emily is probably struggling a little. She would probably benefit from taking a nap.' },
-      'ok': { message: 'Not Nap Time', recommendation: 'Emily got decent sleep. A nap is optional but not necessary.' },
-      'oversleep': { message: 'NAP TIME', recommendation: 'Emily slept more than 9 hours, which might indicate she\'s getting sick. A nap could help her recover.' },
-      'no-data': { message: 'Unknown', recommendation: 'The Oura API is responding, but no sleep data has been fetched yet. Emily\'s ring might still be syncing, or idk something dumb might have happened lmao' }
+    nap: {
+      shambles: {
+        message: "NAP TIME",
+        recommendation:
+          "Emily is severely sleep deprived. She should take a nap RIGHT NOW. GO TO BED",
+      },
+      struggling: {
+        message: "Maybe Nap Time",
+        recommendation:
+          "Emily is probably struggling a little. She is probably considering a nap. Maybe you should, too.",
+      },
+      ok: {
+        message: "Not Nap Time",
+        recommendation:
+          "Emily doesn't NEED to nap. But it could be fun. You never know what might happen during a nap!",
+      },
+      oversleep: {
+        message: "NAP TIME",
+        recommendation:
+          "Emily slept more than 9 hours, which might indicate she's getting sick, because that is way too much sleep, yall are crazy",
+      },
+      "no-data": {
+        message: "Unknown",
+        recommendation:
+          "The Oura API is responding, but no sleep data has been fetched yet. Emily's ring might still be syncing, or idk something dumb might have happened lmao",
+      },
     },
-    'post-nap': {
-      'shambles': { message: 'Not Nap Time', recommendation: 'GO TO BED GIRL' },
-      'struggling': { message: 'Not Nap Time', recommendation: 'Emily really should have slept more last night. She is a bad, bad girl. But it\'s too late to nap. She must live with the consequences of her choices until it is time for bed.' },
-      'ok': { message: 'Not Nap Time', recommendation: 'Emily got decent sleep. Time to relax for the evening.' },
-      'oversleep': { message: 'Not Nap Time', recommendation: 'Emily might be getting sick - she slept over 9 hours. Rest up tonight.' },
-      'no-data': { message: 'Not Nap Time', recommendation: 'The Oura API is responding, but no sleep data has been fetched yet. Emily\'s ring might still be syncing, or idk something dumb might have happened lmao' }
+    "post-nap": {
+      shambles: { message: "Not Nap Time", recommendation: "GO TO BED GIRL" },
+      struggling: {
+        message: "Not Nap Time",
+        recommendation:
+          "Emily really should have slept more last night. She is a bad, bad girl. But it's too late to nap. She must live with the consequences of her choices until it is time for bed.",
+      },
+      ok: {
+        message: "Not Nap Time",
+        recommendation: "Emily is OK. But it is not nap time.",
+      },
+      oversleep: {
+        message: "Not Nap Time",
+        recommendation:
+          "Emily might be getting sick - she slept over 9 hours. Who does that???",
+      },
+      "no-data": {
+        message: "Not Nap Time",
+        recommendation:
+          "The Oura API is responding, but no sleep data has been fetched yet. Emily's ring might still be syncing, or idk something dumb might have happened lmao",
+      },
     },
-    'napped': {
-      message: 'Not Nap Time',
-      recommendation: 'Emily has napped already. Another nap would be silly.'
-    }
+    napped: {
+      message: "Not Nap Time",
+      recommendation: "Emily has napped already. Another nap would be silly.",
+    },
   };
 
   /**
@@ -270,10 +341,10 @@ class NapCalculator {
    * @returns {string} Time window: 'sleep', 'pre-nap', 'nap', or 'post-nap'
    */
   static getTimeWindow(hour) {
-    if (hour >= 23 || hour < 7) return 'sleep';     // 11 PM - 7 AM
-    if (hour >= 7 && hour < 14) return 'pre-nap';   // 7 AM - 2 PM
-    if (hour >= 14 && hour < 17) return 'nap';      // 2 PM - 5 PM
-    return 'post-nap';                               // 5 PM - 11 PM
+    if (hour >= 23 || hour < 7) return "sleep"; // 11 PM - 7 AM
+    if (hour >= 7 && hour < 14) return "pre-nap"; // 7 AM - 2 PM
+    if (hour >= 14 && hour < 17) return "nap"; // 2 PM - 5 PM
+    return "post-nap"; // 5 PM - 11 PM
   }
 
   /**
@@ -283,10 +354,10 @@ class NapCalculator {
    */
   static getSleepState(sleepHours) {
     if (sleepHours === 0) return "no-data";
-    if (sleepHours < 4) return "shambles";    // <4 hours
-    if (sleepHours < 6) return "struggling";   // 4-6 hours
-    if (sleepHours <= 9) return "ok";          // 6-9 hours
-    return "oversleep";                         // >9 hours (probably sick)
+    if (sleepHours < 4) return "shambles"; // <4 hours
+    if (sleepHours < 6) return "struggling"; // 4-6 hours
+    if (sleepHours <= 9) return "ok"; // 6-9 hours
+    return "oversleep"; // >9 hours (probably sick)
   }
 
   /**
@@ -297,8 +368,8 @@ class NapCalculator {
   static getSleepCategory(sleepHours) {
     // Map old names to new names for backward compatibility
     const state = this.getSleepState(sleepHours);
-    if (state === 'shambles') return 'severely-deprived';
-    if (state === 'ok') return 'good';
+    if (state === "shambles") return "severely-deprived";
+    if (state === "ok") return "good";
     return state;
   }
 
@@ -316,7 +387,7 @@ class NapCalculator {
     switch (sleepCategory) {
       case "no-data":
         return "The Oura API is responding, but no sleep data has been fetched yet. Emily's ring might still be syncing, or she might have forgotten to wear it. Check back in a few minutes!";
-        
+
       case "severely-deprived":
         if (isAfterNapBeforeBed) {
           return "GO TO BED GIRL";
