@@ -177,6 +177,25 @@ Remember:
 - Missing documentation = Future confusion
 - Overengineering = Maintenance nightmare and wasted time
 
+## PR REVIEW GUIDELINES
+
+### 8. PULL REQUEST REVIEWS
+When reviewing pull requests:
+- **FOLLOW** the guidelines in `.github/copilot-instructions.md` for review focus areas
+- **ALWAYS CHECK** for existing comments from GitHub Copilot before adding your review
+- **RESPOND TO** any existing Copilot comments in your review - acknowledge, expand, or disagree with reasoning
+- **FOCUS ON**:
+  - Simplicity enforcement - flag overcomplicated solutions
+  - Overengineering detection - question unnecessary abstractions
+  - Poor design choices - identify code smells
+  - Hardcoded success simulation - catch fake implementations
+- **NEVER** approve code that:
+  - Always returns success without real error handling
+  - Uses unnecessary abstraction layers
+  - Contains hardcoded test data in production code
+  - Violates any of the core guidelines in this document
+- **REQUIRE** justification for any complexity that cannot be simplified
+
 ## SUCCESS CRITERIA
 
 Every piece of code must be:
