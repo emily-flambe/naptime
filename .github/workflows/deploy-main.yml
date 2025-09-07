@@ -283,12 +283,7 @@ jobs:
                 --format="value(metadata.creationTimestamp)")
               
               # Calculate age using Python
-              AGE_DAYS=$(python3 -c "
-from datetime import datetime, timezone
-created = datetime.fromisoformat('$CREATED'.replace('Z', '+00:00'))
-now = datetime.now(timezone.utc)
-print((now - created).days)
-" 2>&1)
+              AGE_DAYS=$(python3 -c "from datetime import datetime, timezone; created = datetime.fromisoformat('$CREATED'.replace('Z', '+00:00')); now = datetime.now(timezone.utc); print((now - created).days)" 2>&1)
               
               # Check if date parsing succeeded
               if [[ "$AGE_DAYS" == *"ERROR"* ]] || [[ ! "$AGE_DAYS" =~ ^[0-9]+$ ]]; then
