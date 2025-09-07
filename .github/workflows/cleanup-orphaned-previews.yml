@@ -91,7 +91,7 @@ jobs:
             
             if [ -z "$CREATED" ]; then
               echo "Warning: Could not get creation time for $SERVICE, skipping"
-              ((SKIP_COUNT++))
+              ((SKIP_COUNT++)) || true
               continue
             fi
             
@@ -101,7 +101,7 @@ jobs:
             # Check if date parsing succeeded
             if [[ "$AGE_DAYS" == *"ERROR"* ]] || [[ ! "$AGE_DAYS" =~ ^[0-9]+$ ]]; then
               echo "Warning: Could not parse date for $SERVICE (date: $CREATED), skipping"
-              ((SKIP_COUNT++))
+              ((SKIP_COUNT++)) || true
               continue
             fi
             
@@ -111,14 +111,14 @@ jobs:
             if [ $AGE_DAYS -gt $DAYS_OLD ]; then
               if [ "$DRY_RUN" = "true" ]; then
                 echo "  [DRY RUN] Would delete $SERVICE"
-                ((CLEANUP_COUNT++))
+                ((CLEANUP_COUNT++)) || true
               else
                 # Check if PR is still open by querying GitHub API
                 PR_STATE=$(gh pr view $PR_NUMBER --json state --jq .state 2>/dev/null || echo "unknown")
                 
                 if [ "$PR_STATE" = "OPEN" ]; then
                   echo "  Skipping $SERVICE - PR #$PR_NUMBER is still open"
-                  ((SKIP_COUNT++))
+                  ((SKIP_COUNT++)) || true
                   continue
                 fi
                 
@@ -131,7 +131,7 @@ jobs:
                   --project ${{ env.PROJECT_ID }} \
                   --quiet; then
                   echo "  Deleted $SERVICE"
-                  ((CLEANUP_COUNT++))
+                  ((CLEANUP_COUNT++)) || true
                   
                   # Also clean up container images
                   IMAGE_PREFIX="${{ env.ARTIFACT_REGISTRY_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO }}/${SERVICE}"
@@ -151,12 +151,12 @@ jobs:
                   fi
                 else
                   echo "  Failed to delete $SERVICE"
-                  ((SKIP_COUNT++))
+                  ((SKIP_COUNT++)) || true
                 fi
               fi
             else
               echo "  Keeping $SERVICE - only $AGE_DAYS days old"
-              ((SKIP_COUNT++))
+              ((SKIP_COUNT++)) || true || true
             fi
           done
           
