@@ -54,11 +54,31 @@ class NapCalculator {
       (record) => record.day === today && record.type === "long_sleep",
     );
 
+    // Check if we should have today's data but don't (using Mountain Time)
+    const currentHourMT = parseInt(new Date().toLocaleString("en-US", {
+      timeZone: "America/Denver",
+      hour: "2-digit",
+      hour12: false,
+    }));
+    const shouldHaveTodaysData = currentHourMT >= 8; // After 8 AM MT, we should have last night's data
+    
     // If no sleep for today yet, get the most recent long_sleep
     if (!sleepRecord) {
       sleepRecord = sleepData?.data?.find(
         (record) => record.type === "long_sleep",
       );
+      
+      // Check if this fallback data is stale
+      if (sleepRecord && shouldHaveTodaysData) {
+        const recordDate = new Date(sleepRecord.day);
+        const todayDate = new Date(today);
+        const daysDiff = Math.floor((todayDate - recordDate) / (1000 * 60 * 60 * 24));
+        
+        if (daysDiff > 0) {
+          sleepRecord._isStale = true;
+          sleepRecord._daysBehind = daysDiff;
+        }
+      }
     }
 
     // If still no long_sleep, fall back to first record that's not a nap
@@ -141,8 +161,15 @@ class NapCalculator {
 
     // Get message configuration
     let messageConfig;
-    // During sleep time, always show "I Sleep" regardless of nap status
-    if (isSleepTime) {
+    
+    // Check if data is stale
+    if (sleepRecord?._isStale && shouldHaveTodaysData) {
+      messageConfig = {
+        message: "Oura Hasn't Synced",
+        recommendation: `Last night's sleep data hasn't synced yet. Showing data from ${sleepRecord._daysBehind} day(s) ago. Try syncing your Oura ring.`
+      };
+    } else if (isSleepTime) {
+      // During sleep time, always show "I Sleep" regardless of nap status
       messageConfig = this.MESSAGE_CONFIG[timeWindow][sleepState];
     } else if (hasNappedToday) {
       messageConfig = this.MESSAGE_CONFIG.napped;
