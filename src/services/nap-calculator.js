@@ -357,7 +357,7 @@ class NapCalculator {
       },
     },
     napped: {
-      message: "Not Nap Time",
+      message: "Napping Has Occurred",
       recommendation: "Emily has napped already. Another nap would be silly.",
     },
   };

@@ -265,8 +265,8 @@ describe('NapCalculator', () => {
 
       // Assert
       expect(result.needsNap).toBe(false);
-      expect(result.message).toBe('Not Nap Time');
-      expect(result.recommendation).toBe('emily has napped already. Another nap would be silly.');
+      expect(result.message).toBe('Napping Has Occurred');
+      expect(result.recommendation).toBe('Emily has napped already. Another nap would be silly.');
       expect(result.hasNappedToday).toBe(true);
       expect(result.sleepHours).toBe('4.0'); // Should only count main sleep, not nap
     });
@@ -299,7 +299,7 @@ describe('NapCalculator', () => {
 
       // Assert - Should NOT have napped (nighttime sleep doesn't count)
       expect(result.hasNappedToday).toBe(false);
-      expect(result.recommendation).not.toContain('emily has napped already');
+      expect(result.recommendation).not.toContain('Emily has napped already');
       // With 4 hours sleep at 3pm, Emily would need a nap
       expect(result.isNapTime).toBe(true);
       expect(result.needsNap).toBe(true);
