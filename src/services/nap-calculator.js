@@ -56,7 +56,13 @@ class NapCalculator {
 
     // Check if we should have today's data but don't (using Mountain Time)
     const timeInfo = this.getMountainTimeInfo();
-    const shouldHaveTodaysData = timeInfo.hour >= 8; // After 8 AM MT, we should have last night's data
+    // After 8 AM MT, Oura usually has synced last night's data
+    const OURA_SYNC_HOUR = 8;
+    const shouldHaveTodaysData = timeInfo.hour >= OURA_SYNC_HOUR;
+    
+    // Track if data is stale
+    let isStaleData = false;
+    let daysBehind = 0;
     
     // If no sleep for today yet, get the most recent long_sleep
     if (!sleepRecord) {
@@ -68,11 +74,10 @@ class NapCalculator {
       if (sleepRecord && shouldHaveTodaysData) {
         const recordDate = new Date(sleepRecord.day);
         const todayDate = new Date(today);
-        const daysDiff = Math.floor((todayDate - recordDate) / (1000 * 60 * 60 * 24));
+        daysBehind = Math.floor((todayDate - recordDate) / (1000 * 60 * 60 * 24));
         
-        if (daysDiff > 0) {
-          sleepRecord._isStale = true;
-          sleepRecord._daysBehind = daysDiff;
+        if (daysBehind > 0) {
+          isStaleData = true;
         }
       }
     }
@@ -159,10 +164,10 @@ class NapCalculator {
     let messageConfig;
     
     // Check if data is stale
-    if (sleepRecord?._isStale && shouldHaveTodaysData) {
+    if (isStaleData && shouldHaveTodaysData) {
       messageConfig = {
         message: "Oura Hasn't Synced",
-        recommendation: `Last night's sleep data hasn't synced yet. Showing data from ${sleepRecord._daysBehind} day(s) ago. Try syncing your Oura ring.`
+        recommendation: `Last night's sleep data hasn't synced yet. Showing data from ${daysBehind} day(s) ago. Try syncing your Oura ring.`
       };
     } else if (isSleepTime) {
       // During sleep time, always show "I Sleep" regardless of nap status
