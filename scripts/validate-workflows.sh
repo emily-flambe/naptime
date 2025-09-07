@@ -27,7 +27,7 @@ echo "Checking for required tools..."
 
 # Check for yamllint
 if command_exists yamllint; then
-    echo -e "${GREEN}✓${NC} yamllint found"
+    echo -e "${GREEN}[OK]${NC} yamllint found"
 else
     echo -e "${YELLOW}!${NC} yamllint not found. Install with: pip install yamllint"
     echo "  Skipping YAML syntax validation..."
@@ -35,7 +35,7 @@ fi
 
 # Check for actionlint
 if command_exists actionlint; then
-    echo -e "${GREEN}✓${NC} actionlint found"
+    echo -e "${GREEN}[OK]${NC} actionlint found"
 else
     echo -e "${YELLOW}!${NC} actionlint not found. Install from: https://github.com/rhysd/actionlint"
     echo "  Skipping GitHub Actions specific validation..."
@@ -64,7 +64,7 @@ for file in $WORKFLOW_FILES; do
     
     # Basic file existence check
     if [ ! -f "$file" ]; then
-        echo -e "${RED}✗${NC} File not found: $file"
+        echo -e "${RED}[ERROR]${NC} File not found: $file"
         ((ERRORS++))
         continue
     fi
@@ -73,9 +73,9 @@ for file in $WORKFLOW_FILES; do
     if command_exists yamllint; then
         echo -n "  YAML Syntax: "
         if yamllint -d relaxed "$file" > /dev/null 2>&1; then
-            echo -e "${GREEN}✓${NC} Valid"
+            echo -e "${GREEN}[OK]${NC} Valid"
         else
-            echo -e "${RED}✗${NC} Invalid"
+            echo -e "${RED}[ERROR]${NC} Invalid"
             echo "  Errors:"
             yamllint -d relaxed "$file" 2>&1 | sed 's/^/    /'
             ((ERRORS++))
@@ -86,9 +86,9 @@ for file in $WORKFLOW_FILES; do
     if command_exists actionlint; then
         echo -n "  GitHub Actions: "
         if actionlint "$file" > /dev/null 2>&1; then
-            echo -e "${GREEN}✓${NC} Valid"
+            echo -e "${GREEN}[OK]${NC} Valid"
         else
-            echo -e "${RED}✗${NC} Issues found"
+            echo -e "${RED}[ERROR]${NC} Issues found"
             echo "  Issues:"
             actionlint "$file" 2>&1 | sed 's/^/    /'
             ((WARNINGS++))
@@ -106,7 +106,7 @@ for file in $WORKFLOW_FILES; do
             echo "      Consider using single-line format or external scripts"
             ((WARNINGS++))
         else
-            echo -e "    ${GREEN}✓${NC} Python code is single-line"
+            echo -e "    ${GREEN}[OK]${NC} Python code is single-line"
         fi
     fi
     
@@ -114,10 +114,10 @@ for file in $WORKFLOW_FILES; do
     if grep -E '^\s*run:' "$file" > /dev/null; then
         # Check if the line after 'run:' has proper indentation
         if grep -A1 -E '^\s*run:' "$file" | grep -E '^[^\s]' > /dev/null; then
-            echo -e "    ${RED}✗${NC} Improper indentation after 'run:' blocks"
+            echo -e "    ${RED}[ERROR]${NC} Improper indentation after 'run:' blocks"
             ((ERRORS++))
         else
-            echo -e "    ${GREEN}✓${NC} Proper indentation in run blocks"
+            echo -e "    ${GREEN}[OK]${NC} Proper indentation in run blocks"
         fi
     fi
     
@@ -128,11 +128,11 @@ done
 echo "Validation Summary"
 echo "=================="
 if [ $ERRORS -eq 0 ] && [ $WARNINGS -eq 0 ]; then
-    echo -e "${GREEN}✓ All workflows are valid!${NC}"
+    echo -e "${GREEN}[OK] All workflows are valid!${NC}"
     exit 0
 else
     if [ $ERRORS -gt 0 ]; then
-        echo -e "${RED}✗ Found $ERRORS error(s)${NC}"
+        echo -e "${RED}[ERROR] Found $ERRORS error(s)${NC}"
     fi
     if [ $WARNINGS -gt 0 ]; then
         echo -e "${YELLOW}! Found $WARNINGS warning(s)${NC}"
