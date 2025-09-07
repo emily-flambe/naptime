@@ -45,3 +45,8 @@ __pycache__/
 .DS_Store
 .idea/
 .vscode/
+
+# GitHub Actions workflows (false positives from Python date parsing)
+.github/workflows/deploy-main.yml
+.github/workflows/cleanup-orphaned-previews.yml
+scripts/cleanup-previews.sh

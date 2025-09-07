@@ -103,10 +103,39 @@ get_service_age_days() {
         2>/dev/null || echo "")
     
     if [ -n "$created_timestamp" ]; then
-        local created_epoch=$(date -d "$created_timestamp" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "$created_timestamp" +%s 2>/dev/null || echo "0")
-        local current_epoch=$(date +%s)
-        local age_days=$(( (current_epoch - created_epoch) / 86400 ))
-        echo "$age_days"
+        # Use Python for portable date parsing
+        local age_days=$(python3 -c "
+import datetime
+import sys
+
+# Parse ISO format timestamp
+created_str = '$created_timestamp'
+# Handle various ISO formats
+for fmt in ['%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%dT%H:%M:%S%z']:
+    try:
+        created = datetime.datetime.strptime(created_str, fmt)
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=datetime.timezone.utc)
+        break
+    except ValueError:
+        continue
+else:
+    # If none of the formats work, exit with error
+    print('ERROR: Could not parse date', file=sys.stderr)
+    sys.exit(1)
+
+# Calculate age in days
+now = datetime.datetime.now(datetime.timezone.utc)
+age_days = (now - created).days
+print(age_days)
+" 2>&1)
+        
+        # Check if date parsing succeeded
+        if [[ "$age_days" == *"ERROR"* ]] || [[ ! "$age_days" =~ ^[0-9]+$ ]]; then
+            echo "ERROR"
+        else
+            echo "$age_days"
+        fi
     else
         echo "0"
     fi
@@ -211,6 +240,12 @@ delete_old_previews() {
     local deleted_count=0
     for service in $services; do
         local age_days=$(get_service_age_days "$service")
+        
+        # Check if date parsing failed
+        if [[ "$age_days" == "ERROR" ]]; then
+            echo -e "${YELLOW}Warning: Could not parse date for $service, skipping${NC}"
+            continue
+        fi
         
         if [ "$age_days" -gt "$DAYS_OLD" ]; then
             echo -e "${YELLOW}Service $service is $age_days days old${NC}"

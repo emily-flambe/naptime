@@ -95,8 +95,39 @@ jobs:
               continue
             fi
             
-            # Calculate age in days
-            AGE_DAYS=$(( ($(date +%s) - $(date -d "$CREATED" +%s)) / 86400 ))
+            # Calculate age in days using Python for portable date parsing
+            AGE_DAYS=$(python3 -c "
+import datetime
+import sys
+
+# Parse ISO format timestamp
+created_str = '$CREATED'
+# Handle various ISO formats
+for fmt in ['%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%dT%H:%M:%S%z']:
+    try:
+        created = datetime.datetime.strptime(created_str, fmt)
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=datetime.timezone.utc)
+        break
+    except ValueError:
+        continue
+else:
+    # If none of the formats work, exit with error
+    print('ERROR: Could not parse date', file=sys.stderr)
+    sys.exit(1)
+
+# Calculate age in days
+now = datetime.datetime.now(datetime.timezone.utc)
+age_days = (now - created).days
+print(age_days)
+" 2>&1)
+            
+            # Check if date parsing succeeded
+            if [[ "$AGE_DAYS" == *"ERROR"* ]] || [[ ! "$AGE_DAYS" =~ ^[0-9]+$ ]]; then
+              echo "Warning: Could not parse date for $SERVICE (date: $CREATED), skipping"
+              ((SKIP_COUNT++))
+              continue
+            fi
             
             echo "Service: $SERVICE (PR #$PR_NUMBER) - Age: $AGE_DAYS days"
             
