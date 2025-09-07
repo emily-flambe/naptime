@@ -430,6 +430,91 @@ url: ## Get deployed service URL
 		--project $(PROJECT_ID) \
 		--format 'value(status.url)' || echo "$(RED)Service not deployed yet$(NC)"
 
+.PHONY: list-previews
+list-previews: ## List all preview deployments
+	@if [ "$(PROJECT_ID)" = "your-project-id" ]; then \
+		echo "$(RED)Error: PROJECT_ID not set$(NC)"; \
+		echo "Run 'make init' to configure your project"; \
+		exit 1; \
+	fi
+	@echo "$(BLUE)Listing preview deployments...$(NC)"
+	@GCP_PROJECT_ID=$(PROJECT_ID) GCP_REGION=$(REGION) \
+		./scripts/cleanup-previews.sh --list
+
+.PHONY: cleanup-previews
+cleanup-previews: ## Interactive cleanup of preview deployments
+	@if [ "$(PROJECT_ID)" = "your-project-id" ]; then \
+		echo "$(RED)Error: PROJECT_ID not set$(NC)"; \
+		echo "Run 'make init' to configure your project"; \
+		exit 1; \
+	fi
+	@echo "$(YELLOW)Preview Cleanup Options:$(NC)"
+	@echo "  1. List all preview deployments"
+	@echo "  2. Delete all preview deployments"
+	@echo "  3. Delete previews older than N days"
+	@echo "  4. Delete specific PR preview"
+	@echo "  5. Exit"
+	@echo ""
+	@read -p "Select option (1-5): " option; \
+	case $$option in \
+		1) GCP_PROJECT_ID=$(PROJECT_ID) GCP_REGION=$(REGION) \
+			./scripts/cleanup-previews.sh --list ;; \
+		2) read -p "$(RED)Delete ALL preview deployments? Type 'yes' to confirm: $(NC)" confirm; \
+			if [ "$$confirm" = "yes" ]; then \
+				GCP_PROJECT_ID=$(PROJECT_ID) GCP_REGION=$(REGION) \
+					./scripts/cleanup-previews.sh --all; \
+			else \
+				echo "$(YELLOW)Cancelled$(NC)"; \
+			fi ;; \
+		3) read -p "Delete previews older than how many days? (default: 7): " days; \
+			days=$${days:-7}; \
+			GCP_PROJECT_ID=$(PROJECT_ID) GCP_REGION=$(REGION) \
+				./scripts/cleanup-previews.sh --older-than $$days ;; \
+		4) read -p "Enter PR number to delete: " pr; \
+			GCP_PROJECT_ID=$(PROJECT_ID) GCP_REGION=$(REGION) \
+				./scripts/cleanup-previews.sh --pr $$pr ;; \
+		5) echo "$(GREEN)Exiting$(NC)" ;; \
+		*) echo "$(RED)Invalid option$(NC)" ;; \
+	esac
+
+.PHONY: cleanup-previews-all
+cleanup-previews-all: ## Delete all preview deployments (use with caution!)
+	@if [ "$(PROJECT_ID)" = "your-project-id" ]; then \
+		echo "$(RED)Error: PROJECT_ID not set$(NC)"; \
+		echo "Run 'make init' to configure your project"; \
+		exit 1; \
+	fi
+	@echo "$(RED)WARNING: This will delete ALL preview deployments!$(NC)"
+	@read -p "Type 'DELETE ALL PREVIEWS' to confirm: " confirm; \
+	if [ "$$confirm" = "DELETE ALL PREVIEWS" ]; then \
+		GCP_PROJECT_ID=$(PROJECT_ID) GCP_REGION=$(REGION) \
+			./scripts/cleanup-previews.sh --all; \
+	else \
+		echo "$(YELLOW)Cancelled$(NC)"; \
+	fi
+
+.PHONY: cleanup-previews-old
+cleanup-previews-old: ## Delete preview deployments older than 7 days
+	@if [ "$(PROJECT_ID)" = "your-project-id" ]; then \
+		echo "$(RED)Error: PROJECT_ID not set$(NC)"; \
+		echo "Run 'make init' to configure your project"; \
+		exit 1; \
+	fi
+	@echo "$(BLUE)Cleaning up preview deployments older than 7 days...$(NC)"
+	@GCP_PROJECT_ID=$(PROJECT_ID) GCP_REGION=$(REGION) \
+		./scripts/cleanup-previews.sh --older-than 7
+
+.PHONY: cleanup-previews-dry-run
+cleanup-previews-dry-run: ## Show what preview deployments would be deleted
+	@if [ "$(PROJECT_ID)" = "your-project-id" ]; then \
+		echo "$(RED)Error: PROJECT_ID not set$(NC)"; \
+		echo "Run 'make init' to configure your project"; \
+		exit 1; \
+	fi
+	@echo "$(BLUE)Dry run: Showing what would be deleted...$(NC)"
+	@GCP_PROJECT_ID=$(PROJECT_ID) GCP_REGION=$(REGION) \
+		./scripts/cleanup-previews.sh --older-than 7 --dry-run
+
 .PHONY: clean
 clean: ## Clean build artifacts and caches
 	@echo "$(GREEN)Cleaning build artifacts...$(NC)"

@@ -23,11 +23,19 @@
   font-size: clamp(2.5rem, 8vw, 5.5rem);  /* Slightly smaller to fit better */
   font-weight: 300;
   margin: 0;
-  line-height: 1;
+  line-height: 1.1;
   letter-spacing: -0.02em;
   color: inherit;  /* Use the color from root */
   text-transform: none;  /* Back to normal case */
-  white-space: nowrap;  /* Prevent line breaks */
+  text-align: center;  /* Ensure text is centered */
+}
+
+.nap-gif {
+  width: 100%;
+  max-width: 400px;
+  margin: 2rem auto;
+  display: block;
+  border-radius: 8px;
 }
 
 .details-toggle {
