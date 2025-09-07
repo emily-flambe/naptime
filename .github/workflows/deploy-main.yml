@@ -282,7 +282,24 @@ jobs:
                 --project ${{ env.PROJECT_ID }} \
                 --format="value(metadata.creationTimestamp)")
               
-              AGE_DAYS=$(( ($(date +%s) - $(date -d "$CREATED" +%s)) / 86400 ))
+              # Calculate age using Python for portable date parsing
+              AGE_DAYS=$(python3 -c "
+import datetime
+import sys
+created_str = '$CREATED'
+for fmt in ['%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%dT%H:%M:%S%z']:
+    try:
+        created = datetime.datetime.strptime(created_str, fmt)
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=datetime.timezone.utc)
+        break
+    except ValueError:
+        continue
+else:
+    sys.exit(1)
+now = datetime.datetime.now(datetime.timezone.utc)
+print((now - created).days)
+" 2>/dev/null || echo "0")
               
               if [ $AGE_DAYS -gt 7 ]; then
                 echo "️ Deleting orphaned preview $SERVICE (${AGE_DAYS} days old)"

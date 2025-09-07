@@ -103,9 +103,24 @@ get_service_age_days() {
         2>/dev/null || echo "")
     
     if [ -n "$created_timestamp" ]; then
-        local created_epoch=$(date -d "$created_timestamp" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%S" "$created_timestamp" +%s 2>/dev/null || echo "0")
-        local current_epoch=$(date +%s)
-        local age_days=$(( (current_epoch - created_epoch) / 86400 ))
+        # Use Python for portable date parsing
+        local age_days=$(python3 -c "
+import datetime
+import sys
+created_str = '$created_timestamp'
+for fmt in ['%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%dT%H:%M:%S%z']:
+    try:
+        created = datetime.datetime.strptime(created_str, fmt)
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=datetime.timezone.utc)
+        break
+    except ValueError:
+        continue
+else:
+    sys.exit(1)
+now = datetime.datetime.now(datetime.timezone.utc)
+print((now - created).days)
+" 2>/dev/null || echo "0")
         echo "$age_days"
     else
         echo "0"
