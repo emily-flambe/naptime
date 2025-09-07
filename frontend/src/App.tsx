@@ -119,9 +119,9 @@ function App() {
   useEffect(() => {
     if (!napStatus) return
 
-    // Determine if it's sleep time (10 PM - 7 AM) - temporarily 10 PM for testing
+    // Determine if it's sleep time (11 PM - 7 AM)
     const currentHour = new Date().getHours()
-    const isSleepTime = currentHour >= 22 || currentHour < 7
+    const isSleepTime = currentHour >= 23 || currentHour < 7
     
     // Update document title
     document.title = isSleepTime ? 'Zzz' : 'Naptime?'

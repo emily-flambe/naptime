@@ -367,11 +367,10 @@ class NapCalculator {
    * @returns {string} Time window: 'sleep', 'pre-nap', 'nap', or 'post-nap'
    */
   static getTimeWindow(hour) {
-    // Temporarily using 10 PM instead of 11 PM for testing
-    if (hour >= 22 || hour < 7) return "sleep"; // 10 PM - 7 AM (temporarily changed from 11 PM)
+    if (hour >= 23 || hour < 7) return "sleep"; // 11 PM - 7 AM
     if (hour >= 7 && hour < 14) return "pre-nap"; // 7 AM - 2 PM
     if (hour >= 14 && hour < 17) return "nap"; // 2 PM - 5 PM
-    return "post-nap"; // 5 PM - 10 PM
+    return "post-nap"; // 5 PM - 11 PM
   }
 
   /**
