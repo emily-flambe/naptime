@@ -64,6 +64,7 @@ help: ## Show available commands
 	@echo ""
 	@echo "$(GREEN)Utilities:$(NC)"
 	@echo "  $(GREEN)make clean$(NC)        - Clean build artifacts and caches"
+	@echo "                        Options: days_old=N (default: 7), dry_run=true/false (default: true)"
 	@echo "  $(GREEN)make check-env$(NC)    - Verify environment configuration"
 	@echo ""
 	@echo "$(YELLOW)Quick Start:$(NC)"
@@ -528,13 +529,13 @@ cleanup-previews-dry-run: ## Show what preview deployments would be deleted
 
 
 .PHONY: clean
-clean: ## Clean build artifacts, caches, and orphaned preview deployments
+clean: ## Clean build artifacts, caches, and orphaned preview deployments (use days_old=N dry_run=true for options)
 	@echo "$(GREEN)Cleaning build artifacts...$(NC)"
 	@rm -rf frontend/dist frontend/node_modules/.vite
 	@rm -rf node_modules/.cache coverage
 	@echo "$(GREEN)Cleaning orphaned preview deployments...$(NC)"
 	@if [ -f "./scripts/cleanup-orphaned-previews.sh" ] && [ "$(PROJECT_ID)" != "your-project-id" ]; then \
-		PROJECT_ID=$(PROJECT_ID) REGION=$(REGION) ./scripts/cleanup-orphaned-previews.sh || echo "$(YELLOW)Preview cleanup skipped$(NC)"; \
+		DAYS_OLD=$(or $(days_old),7) DRY_RUN=$(or $(dry_run),true) PROJECT_ID=$(PROJECT_ID) REGION=$(REGION) ./scripts/cleanup-orphaned-previews.sh || echo "$(YELLOW)Preview cleanup skipped$(NC)"; \
 	else \
 		echo "$(YELLOW)Preview cleanup skipped (no script or PROJECT_ID not set)$(NC)"; \
 	fi
