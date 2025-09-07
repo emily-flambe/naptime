@@ -515,28 +515,6 @@ cleanup-previews-dry-run: ## Show what preview deployments would be deleted
 	@GCP_PROJECT_ID=$(PROJECT_ID) GCP_REGION=$(REGION) \
 		./scripts/cleanup-previews.sh --older-than 7 --dry-run
 
-.PHONY: preview-cleanup
-preview-cleanup: ## Manually cleanup orphaned preview deployments
-	@if [ "$(PROJECT_ID)" = "your-project-id" ]; then \
-		echo "$(RED)Error: PROJECT_ID not set$(NC)"; \
-		echo "Run 'make init' to configure your project"; \
-		exit 1; \
-	fi
-	@echo "$(BLUE)Running manual preview cleanup...$(NC)"
-	@echo "This will show a dry run first. To actually delete, set DRY_RUN=false"
-	@PROJECT_ID=$(PROJECT_ID) REGION=$(REGION) \
-		./scripts/cleanup-orphaned-previews.sh
-
-.PHONY: preview-cleanup-force
-preview-cleanup-force: ## Force cleanup orphaned previews (actually delete)
-	@if [ "$(PROJECT_ID)" = "your-project-id" ]; then \
-		echo "$(RED)Error: PROJECT_ID not set$(NC)"; \
-		echo "Run 'make init' to configure your project"; \
-		exit 1; \
-	fi
-	@echo "$(RED)WARNING: This will DELETE orphaned preview deployments!$(NC)"
-	@PROJECT_ID=$(PROJECT_ID) REGION=$(REGION) DRY_RUN=false \
-		./scripts/cleanup-orphaned-previews.sh
 
 .PHONY: clean
 clean: ## Clean build artifacts, caches, and orphaned preview deployments
