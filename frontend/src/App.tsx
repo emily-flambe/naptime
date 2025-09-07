@@ -115,13 +115,16 @@ function App() {
     return () => clearInterval(interval)
   }, [fetchNapStatus])
 
-  // Update favicon based on nap status
+  // Update favicon and title based on nap status
   useEffect(() => {
     if (!napStatus) return
 
-    // Determine if it's sleep time (11 PM - 7 AM)
+    // Determine if it's sleep time (10 PM - 7 AM) - temporarily 10 PM for testing
     const currentHour = new Date().getHours()
-    const isSleepTime = currentHour >= 23 || currentHour < 7
+    const isSleepTime = currentHour >= 22 || currentHour < 7
+    
+    // Update document title
+    document.title = isSleepTime ? 'Zzz' : 'Naptime?'
     
     // Use i-sleep.png when should nap OR it's sleep time
     // Use real-shit.png otherwise
@@ -155,16 +158,22 @@ function App() {
             ) : (
               <>
                 <h1 className={`nap-message ${napStatus.shouldNap ? 'needs-nap' : 'no-nap'}`}>
-                  {napStatus.hasNappedToday ? 'Napping Has Occurred' : napStatus.message}
+                  {napStatus.message}
                 </h1>
                 
-                {napStatus.hasNappedToday && (
+                {napStatus.message === "I Sleep" ? (
+                  <img 
+                    src="/i-sleep.png" 
+                    alt="I Sleep" 
+                    className="sleep-image"
+                  />
+                ) : napStatus.hasNappedToday ? (
                   <img 
                     src="/good-for-her.gif" 
                     alt="Good for her" 
                     className="nap-gif"
                   />
-                )}
+                ) : null}
                 
                 <button 
                   className="details-toggle"

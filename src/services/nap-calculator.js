@@ -82,11 +82,11 @@ class NapCalculator {
           timeZone: "America/Denver",
           hour: "2-digit",
           hour12: false,
-        })
+        }),
       );
       const timeWindow = this.getTimeWindow(hour);
       const noDataConfig = this.MESSAGE_CONFIG[timeWindow]["no-data"];
-      
+
       // Return special status when we have no data
       return {
         needsNap: false,
@@ -95,8 +95,8 @@ class NapCalculator {
         sleepCategory: "no-data",
         napPriority: "unknown",
         quality: "Unknown",
-        isNapTime: timeWindow === 'nap',
-        isSleepTime: timeWindow === 'sleep',
+        isNapTime: timeWindow === "nap",
+        isSleepTime: timeWindow === "sleep",
         currentTime: new Date().toLocaleString("en-US", {
           timeZone: "America/Denver",
           timeStyle: "short",
@@ -141,7 +141,10 @@ class NapCalculator {
 
     // Get message configuration
     let messageConfig;
-    if (hasNappedToday) {
+    // During sleep time, always show "I Sleep" regardless of nap status
+    if (isSleepTime) {
+      messageConfig = this.MESSAGE_CONFIG[timeWindow][sleepState];
+    } else if (hasNappedToday) {
       messageConfig = this.MESSAGE_CONFIG.napped;
     } else {
       messageConfig = this.MESSAGE_CONFIG[timeWindow][sleepState];
@@ -201,7 +204,6 @@ class NapCalculator {
     };
   }
 
-
   /**
    * Convert seconds to hours with decimal precision
    * @param {number} seconds - Sleep duration in seconds
@@ -232,24 +234,24 @@ class NapCalculator {
   static MESSAGE_CONFIG = {
     sleep: {
       shambles: {
-        message: "Sleep Time",
-        recommendation: "Emily should be asleep right now.",
+        message: "I Sleep",
+        recommendation: "Emily SHOULD be asleep right now.",
       },
       struggling: {
-        message: "Sleep Time",
-        recommendation: "Emily should be asleep right now.",
+        message: "I Sleep",
+        recommendation: "Emily SHOULD be asleep right now.",
       },
       ok: {
-        message: "Sleep Time",
-        recommendation: "Emily should be asleep right now.",
+        message: "I Sleep",
+        recommendation: "Emily SHOULD be asleep right now.",
       },
       oversleep: {
-        message: "Sleep Time",
-        recommendation: "Emily should be asleep right now.",
+        message: "I Sleep",
+        recommendation: "Emily SHOULD be asleep right now.",
       },
       "no-data": {
-        message: "Sleep Time",
-        recommendation: "Emily should be asleep right now.",
+        message: "I Sleep",
+        recommendation: "Emily SHOULD be asleep right now.",
       },
     },
     "pre-nap": {
@@ -338,10 +340,11 @@ class NapCalculator {
    * @returns {string} Time window: 'sleep', 'pre-nap', 'nap', or 'post-nap'
    */
   static getTimeWindow(hour) {
-    if (hour >= 23 || hour < 7) return "sleep"; // 11 PM - 7 AM
+    // Temporarily using 10 PM instead of 11 PM for testing
+    if (hour >= 22 || hour < 7) return "sleep"; // 10 PM - 7 AM (temporarily changed from 11 PM)
     if (hour >= 7 && hour < 14) return "pre-nap"; // 7 AM - 2 PM
     if (hour >= 14 && hour < 17) return "nap"; // 2 PM - 5 PM
-    return "post-nap"; // 5 PM - 11 PM
+    return "post-nap"; // 5 PM - 10 PM
   }
 
   /**
@@ -370,7 +373,6 @@ class NapCalculator {
     return state;
   }
 
-
   /**
    * Get current Mountain Time information
    * @returns {Object} Time information object
@@ -392,7 +394,7 @@ class NapCalculator {
       fullFormatted: now.toLocaleString("en-US", {
         timeZone: "America/Denver",
       }),
-      isNapTime: this.getTimeWindow(mountainTime.getHours()) === 'nap',
+      isNapTime: this.getTimeWindow(mountainTime.getHours()) === "nap",
     };
   }
 
