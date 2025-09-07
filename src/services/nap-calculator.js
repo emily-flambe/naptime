@@ -54,11 +54,32 @@ class NapCalculator {
       (record) => record.day === today && record.type === "long_sleep",
     );
 
+    // Check if we should have today's data but don't (using Mountain Time)
+    const timeInfo = this.getMountainTimeInfo();
+    // After 8 AM MT, Oura usually has synced last night's data
+    const OURA_SYNC_HOUR = 8;
+    const shouldHaveTodaysData = timeInfo.hour >= OURA_SYNC_HOUR;
+    
+    // Track if data is stale
+    let isStaleData = false;
+    let daysBehind = 0;
+    
     // If no sleep for today yet, get the most recent long_sleep
     if (!sleepRecord) {
       sleepRecord = sleepData?.data?.find(
         (record) => record.type === "long_sleep",
       );
+      
+      // Check if this fallback data is stale
+      if (sleepRecord && shouldHaveTodaysData) {
+        const recordDate = new Date(sleepRecord.day);
+        const todayDate = new Date(today);
+        daysBehind = Math.floor((todayDate - recordDate) / (1000 * 60 * 60 * 24));
+        
+        if (daysBehind > 0) {
+          isStaleData = true;
+        }
+      }
     }
 
     // If still no long_sleep, fall back to first record that's not a nap
@@ -82,11 +103,11 @@ class NapCalculator {
           timeZone: "America/Denver",
           hour: "2-digit",
           hour12: false,
-        })
+        }),
       );
       const timeWindow = this.getTimeWindow(hour);
       const noDataConfig = this.MESSAGE_CONFIG[timeWindow]["no-data"];
-      
+
       // Return special status when we have no data
       return {
         needsNap: false,
@@ -95,8 +116,8 @@ class NapCalculator {
         sleepCategory: "no-data",
         napPriority: "unknown",
         quality: "Unknown",
-        isNapTime: timeWindow === 'nap',
-        isSleepTime: timeWindow === 'sleep',
+        isNapTime: timeWindow === "nap",
+        isSleepTime: timeWindow === "sleep",
         currentTime: new Date().toLocaleString("en-US", {
           timeZone: "America/Denver",
           timeStyle: "short",
@@ -141,7 +162,17 @@ class NapCalculator {
 
     // Get message configuration
     let messageConfig;
-    if (hasNappedToday) {
+    
+    // Check if data is stale
+    if (isStaleData && shouldHaveTodaysData) {
+      messageConfig = {
+        message: "Oura Hasn't Synced",
+        recommendation: `Last night's sleep data hasn't synced yet. Showing data from ${daysBehind} day(s) ago. Try syncing your Oura ring.`
+      };
+    } else if (isSleepTime) {
+      // During sleep time, always show "I Sleep" regardless of nap status
+      messageConfig = this.MESSAGE_CONFIG[timeWindow][sleepState];
+    } else if (hasNappedToday) {
       messageConfig = this.MESSAGE_CONFIG.napped;
     } else {
       messageConfig = this.MESSAGE_CONFIG[timeWindow][sleepState];
@@ -201,7 +232,6 @@ class NapCalculator {
     };
   }
 
-
   /**
    * Convert seconds to hours with decimal precision
    * @param {number} seconds - Sleep duration in seconds
@@ -232,24 +262,24 @@ class NapCalculator {
   static MESSAGE_CONFIG = {
     sleep: {
       shambles: {
-        message: "Sleep Time",
-        recommendation: "Emily should be asleep right now.",
+        message: "I Sleep",
+        recommendation: "Emily SHOULD be asleep right now.",
       },
       struggling: {
-        message: "Sleep Time",
-        recommendation: "Emily should be asleep right now.",
+        message: "I Sleep",
+        recommendation: "Emily SHOULD be asleep right now.",
       },
       ok: {
-        message: "Sleep Time",
-        recommendation: "Emily should be asleep right now.",
+        message: "I Sleep",
+        recommendation: "Emily SHOULD be asleep right now.",
       },
       oversleep: {
-        message: "Sleep Time",
-        recommendation: "Emily should be asleep right now.",
+        message: "I Sleep",
+        recommendation: "Emily SHOULD be asleep right now.",
       },
       "no-data": {
-        message: "Sleep Time",
-        recommendation: "Emily should be asleep right now.",
+        message: "I Sleep",
+        recommendation: "Emily SHOULD be asleep right now.",
       },
     },
     "pre-nap": {
@@ -370,7 +400,6 @@ class NapCalculator {
     return state;
   }
 
-
   /**
    * Get current Mountain Time information
    * @returns {Object} Time information object
@@ -392,7 +421,7 @@ class NapCalculator {
       fullFormatted: now.toLocaleString("en-US", {
         timeZone: "America/Denver",
       }),
-      isNapTime: this.getTimeWindow(mountainTime.getHours()) === 'nap',
+      isNapTime: this.getTimeWindow(mountainTime.getHours()) === "nap",
     };
   }
 
