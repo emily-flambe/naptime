@@ -46,6 +46,7 @@ help: ## Show available commands
 	@echo "  $(GREEN)make lint$(NC)         - Run linters for both frontend and backend"
 	@echo "  $(GREEN)make format$(NC)       - Format code (frontend and backend)"
 	@echo "  $(GREEN)make test$(NC)         - Run all tests"
+	@echo "  $(GREEN)make validate-workflows$(NC) - Validate GitHub Actions workflow syntax"
 	@echo ""
 	@echo "$(GREEN)Security:$(NC)"
 	@echo "  $(GREEN)make scan-secrets$(NC) - Scan repository for secrets with TruffleHog"
@@ -289,6 +290,16 @@ lint: ## Run linters
 		echo "$(YELLOW)flake8 not installed, skipping Python linting$(NC)"; \
 	fi
 	@echo "$(GREEN) Linting complete$(NC)"
+
+.PHONY: validate-workflows
+validate-workflows: ## Validate GitHub Actions workflow syntax
+	@echo "$(GREEN)Validating GitHub Actions workflows...$(NC)"
+	@if [ -f scripts/validate-workflows.sh ]; then \
+		./scripts/validate-workflows.sh; \
+	else \
+		echo "$(RED)Error: scripts/validate-workflows.sh not found$(NC)"; \
+		exit 1; \
+	fi
 
 .PHONY: deploy
 deploy: build ## Deploy to Google Cloud Run
