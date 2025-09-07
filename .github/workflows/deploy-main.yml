@@ -286,7 +286,10 @@ jobs:
               AGE_DAYS=$(python3 -c "
 import datetime
 import sys
+
+# Parse ISO format timestamp
 created_str = '$CREATED'
+# Handle various ISO formats
 for fmt in ['%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%dT%H:%M:%S%z']:
     try:
         created = datetime.datetime.strptime(created_str, fmt)
@@ -296,10 +299,21 @@ for fmt in ['%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%SZ', '%Y-%m-%dT%H:%M:%S%z'
     except ValueError:
         continue
 else:
+    # If none of the formats work, exit with error
+    print('ERROR: Could not parse date', file=sys.stderr)
     sys.exit(1)
+
+# Calculate age in days
 now = datetime.datetime.now(datetime.timezone.utc)
-print((now - created).days)
-" 2>/dev/null || echo "0")
+age_days = (now - created).days
+print(age_days)
+" 2>&1)
+              
+              # Check if date parsing succeeded
+              if [[ "$AGE_DAYS" == *"ERROR"* ]] || [[ ! "$AGE_DAYS" =~ ^[0-9]+$ ]]; then
+                echo "Warning: Could not parse date for $SERVICE (date: $CREATED), skipping"
+                continue
+              fi
               
               if [ $AGE_DAYS -gt 7 ]; then
                 echo "️ Deleting orphaned preview $SERVICE (${AGE_DAYS} days old)"
