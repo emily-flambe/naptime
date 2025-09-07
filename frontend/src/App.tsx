@@ -50,6 +50,7 @@ interface DateRange {
 interface NapStatus {
   message: string
   shouldNap: boolean
+  hasNappedToday?: boolean
   sleepHours?: string
   sleepCategory?: string
   napPriority?: string
@@ -131,8 +132,16 @@ function App() {
             ) : (
               <>
                 <h1 className={`nap-message ${napStatus.shouldNap ? 'needs-nap' : 'no-nap'}`}>
-                  {napStatus.message}
+                  {napStatus.hasNappedToday ? 'Napping Has Occurred' : napStatus.message}
                 </h1>
+                
+                {napStatus.hasNappedToday && (
+                  <img 
+                    src="/good-for-her.gif" 
+                    alt="Good for her" 
+                    className="nap-gif"
+                  />
+                )}
                 
                 <button 
                   className="details-toggle"
