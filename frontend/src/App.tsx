@@ -119,9 +119,15 @@ function App() {
   useEffect(() => {
     if (!napStatus) return
 
-    // Determine if it's sleep time (11 PM - 7 AM)
-    const currentHour = new Date().getHours()
-    const isSleepTime = currentHour >= 23 || currentHour < 7
+    // Determine if it's sleep time (11 PM - 7 AM) in Mountain Time
+    const mountainTimeHour = parseInt(
+      new Date().toLocaleString('en-US', {
+        timeZone: 'America/Denver',
+        hour: '2-digit',
+        hour12: false
+      })
+    )
+    const isSleepTime = mountainTimeHour >= 23 || mountainTimeHour < 7
     
     // Update document title
     document.title = isSleepTime ? 'Zzz' : 'Naptime?'

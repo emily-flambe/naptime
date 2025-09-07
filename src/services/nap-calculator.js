@@ -55,12 +55,8 @@ class NapCalculator {
     );
 
     // Check if we should have today's data but don't (using Mountain Time)
-    const currentHourMT = parseInt(new Date().toLocaleString("en-US", {
-      timeZone: "America/Denver",
-      hour: "2-digit",
-      hour12: false,
-    }));
-    const shouldHaveTodaysData = currentHourMT >= 8; // After 8 AM MT, we should have last night's data
+    const timeInfo = this.getMountainTimeInfo();
+    const shouldHaveTodaysData = timeInfo.hour >= 8; // After 8 AM MT, we should have last night's data
     
     // If no sleep for today yet, get the most recent long_sleep
     if (!sleepRecord) {
