@@ -115,6 +115,29 @@ function App() {
     return () => clearInterval(interval)
   }, [fetchNapStatus])
 
+  // Update favicon based on nap status
+  useEffect(() => {
+    if (!napStatus) return
+
+    // Determine if it's sleep time (11 PM - 7 AM)
+    const currentHour = new Date().getHours()
+    const isSleepTime = currentHour >= 23 || currentHour < 7
+    
+    // Use i-sleep.png when should nap OR it's sleep time
+    // Use real-shit.png otherwise
+    const shouldUseSleepIcon = napStatus.shouldNap || isSleepTime
+    const faviconPath = shouldUseSleepIcon ? '/i-sleep.png' : '/real-shit.png'
+    
+    // Update the favicon
+    const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement || document.createElement('link')
+    link.type = 'image/png'
+    link.rel = 'icon'
+    link.href = faviconPath
+    if (!document.querySelector("link[rel*='icon']")) {
+      document.getElementsByTagName('head')[0].appendChild(link)
+    }
+  }, [napStatus])
+
   return (
     <div className="app">
       <main className="nap-container">
