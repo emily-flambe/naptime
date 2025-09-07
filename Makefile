@@ -515,11 +515,18 @@ cleanup-previews-dry-run: ## Show what preview deployments would be deleted
 	@GCP_PROJECT_ID=$(PROJECT_ID) GCP_REGION=$(REGION) \
 		./scripts/cleanup-previews.sh --older-than 7 --dry-run
 
+
 .PHONY: clean
-clean: ## Clean build artifacts and caches
+clean: ## Clean build artifacts, caches, and orphaned preview deployments
 	@echo "$(GREEN)Cleaning build artifacts...$(NC)"
 	@rm -rf frontend/dist frontend/node_modules/.vite
 	@rm -rf node_modules/.cache coverage
+	@echo "$(GREEN)Cleaning orphaned preview deployments...$(NC)"
+	@if [ -f "./scripts/cleanup-orphaned-previews.sh" ] && [ "$(PROJECT_ID)" != "your-project-id" ]; then \
+		PROJECT_ID=$(PROJECT_ID) REGION=$(REGION) ./scripts/cleanup-orphaned-previews.sh || echo "$(YELLOW)Preview cleanup skipped$(NC)"; \
+	else \
+		echo "$(YELLOW)Preview cleanup skipped (no script or PROJECT_ID not set)$(NC)"; \
+	fi
 	@echo "$(GREEN) Clean complete$(NC)"
 
 .PHONY: check-env
