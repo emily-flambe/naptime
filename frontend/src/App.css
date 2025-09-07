@@ -38,6 +38,14 @@
   border-radius: 8px;
 }
 
+.sleep-image {
+  width: 100%;
+  max-width: 300px;
+  margin: 2rem auto;
+  display: block;
+  border-radius: 8px;
+}
+
 .details-toggle {
   margin-top: 2rem;  /* More space */
   background: none;
