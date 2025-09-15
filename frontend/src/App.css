@@ -249,7 +249,7 @@
   margin-bottom: 1rem;
 }
 
-.retry-btn {
+.retry-btn, .refresh-btn {
   background: none;
   border: 1px solid #999;
   color: #666;
@@ -260,12 +260,36 @@
   transition: all 0.2s;
 }
 
-.retry-btn:hover {
+.data-status {
+  margin: 1rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.cached-indicator {
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+.refresh-btn {
+  margin-top: 0;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.retry-btn:hover, .refresh-btn:hover {
   border-color: #666;
   background: #f9f9f9;
 }
 
-.retry-btn:focus-visible {
+.retry-btn:focus-visible, .refresh-btn:focus-visible {
   outline: 2px solid #666;
   outline-offset: 2px;
 }

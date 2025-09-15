@@ -47,23 +47,34 @@ router.get('/nap-status', async (req, res) => {
 
     // Create cache key
     const cacheKey = 'emily_nap_status';
-    
-    // Check cache first (5 minute cache)
-    const cachedStatus = cache.get(cacheKey);
-    if (cachedStatus) {
-      return res.json({
-        ...cachedStatus,
-        cached: true,
-        cacheTime: cachedStatus.lastUpdated
-      });
+
+    // Check if force refresh is requested
+    const forceRefresh = req.query.force === 'true';
+
+    // Check cache first (2 minute cache, unless force refresh)
+    if (!forceRefresh) {
+      const cachedStatus = cache.get(cacheKey);
+      if (cachedStatus) {
+        console.log(`[${timestamp}] Returning cached data from ${cachedStatus.lastUpdated}`);
+        return res.json({
+          ...cachedStatus,
+          cached: true,
+          cacheTime: cachedStatus.lastUpdated
+        });
+      }
+    } else {
+      console.log(`[${timestamp}] Force refresh requested, bypassing cache`);
     }
 
     // Get sleep data from Oura API
+    console.log(`[${timestamp}] Fetching fresh data from Oura API`);
     const sleepData = await ouraService.getYesterdaySleep(accessToken);
-    
+    console.log(`[${timestamp}] Received ${sleepData?.data?.length || 0} sleep records from Oura`);
+
     // Calculate nap status
     const status = napCalculator.calculateNapStatus(sleepData);
-    
+    console.log(`[${timestamp}] Calculated nap status: ${status.message}`);
+
     // Add raw API data for debugging
     status.debugData = {
       apiResponse: sleepData,
@@ -81,8 +92,9 @@ router.get('/nap-status', async (req, res) => {
                      sleepData?.data?.[0]
     };
     
-    // Cache the result for 5 minutes
-    cache.set(cacheKey, status, 300);
+    // Cache the result for 2 minutes (reduced from 5)
+    cache.set(cacheKey, status, 120);
+    console.log(`[${timestamp}] Cached new data for 2 minutes`);
 
     // Return the status with debug data
     res.json(status);

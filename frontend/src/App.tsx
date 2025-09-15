@@ -88,10 +88,13 @@ function App() {
       : `http://localhost:8080${endpoint}`  // In development, use local backend
   }, [])
 
-  const fetchNapStatus = useCallback(async () => {
+  const fetchNapStatus = useCallback(async (forceRefresh = false) => {
     setLoadingNap(true)
     try {
-      const response = await fetch(getApiUrl('/api/nap-status'))
+      const url = forceRefresh
+        ? getApiUrl('/api/nap-status?force=true')
+        : getApiUrl('/api/nap-status')
+      const response = await fetch(url)
       const data: NapStatus = await response.json()
       // Remove noisy console log
       setNapStatus(data)
@@ -111,7 +114,7 @@ function App() {
   useEffect(() => {
     fetchNapStatus()
     // Refresh every 5 minutes
-    const interval = setInterval(fetchNapStatus, 5 * 60 * 1000)
+    const interval = setInterval(() => fetchNapStatus(false), 3 * 60 * 1000)
     return () => clearInterval(interval)
   }, [fetchNapStatus])
 
@@ -157,7 +160,7 @@ function App() {
             {napStatus.error ? (
               <div className="error">
                 <div className="message">unable to check nap status</div>
-                <button onClick={fetchNapStatus} className="retry-btn">
+                <button onClick={() => fetchNapStatus(false)} className="retry-btn">
                   retry
                 </button>
               </div>
@@ -166,7 +169,18 @@ function App() {
                 <h1 className={`nap-message ${napStatus.shouldNap ? 'needs-nap' : 'no-nap'}`}>
                   {napStatus.message}
                 </h1>
-                
+
+                <div className="data-status">
+                  {napStatus.cached && <span className="cached-indicator">📦 Cached</span>}
+                  <button
+                    onClick={() => fetchNapStatus(true)}
+                    className="refresh-btn"
+                    disabled={loadingNap}
+                  >
+                    {loadingNap ? '⏳' : '🔄'} Refresh
+                  </button>
+                </div>
+
                 {napStatus.message === "I Sleep" ? (
                   <img 
                     src="/i-sleep.png" 
