@@ -23,11 +23,11 @@ class NapCalculator {
     const [month, day, year] = nowMT.split("/");
     const today = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
 
-    // Check if there's been a nap today (sleep that started between 11am-7pm MT)
+    // Check if there's been a nap today (sleep that started between 11am-10pm MT)
     const todayNap = sleepData?.data?.find((record) => {
       if (record.day !== today) return false;
 
-      // Parse the bedtime_start to check if it's during daytime (11am-7pm MT)
+      // Parse the bedtime_start to check if it's during daytime (11am-10pm MT)
       const bedtimeStart = new Date(record.bedtime_start);
 
       // Convert to Mountain Time to get the correct hour
@@ -37,14 +37,16 @@ class NapCalculator {
           hour: "2-digit",
           hour12: false,
         }),
+        10
       );
 
-      // A nap is sleep that starts between 11am (11:00) and 7pm (19:00)
-      const isDaytimeNap = startHour >= 11 && startHour < 19;
+      // A nap is sleep that starts between 11am (11:00) and 10pm (22:00)
+      const isDaytimeNap = startHour >= 11 && startHour < 22;
 
       // Include late_nap type OR any sleep during daytime hours
+      // But only if it's within the 11am-10pm window
       return (
-        record.type === "late_nap" ||
+        (record.type === "late_nap" && isDaytimeNap) ||
         (isDaytimeNap && record.type !== "long_sleep")
       );
     });
@@ -142,13 +144,13 @@ class NapCalculator {
 
     // Get current time in Mountain Time (America/Denver)
     const now = new Date();
-    const mountainTimeString = now.toLocaleString("en-US", {
+    const hourString = now.toLocaleString("en-US", {
       timeZone: "America/Denver",
+      hour: "2-digit",
+      hour12: false,
     });
+    const hour = parseInt(hourString, 10);
 
-    // Create a proper Date object for Mountain Time
-    const mountainTime = new Date(mountainTimeString);
-    const hour = mountainTime.getHours();
 
     // Time windows in Mountain Time
     const timeWindow = this.getTimeWindow(hour);
@@ -183,14 +185,21 @@ class NapCalculator {
     let napPriority = "none";
 
     if (!hasNappedToday) {
-      if (sleepState === "shambles" || sleepState === "oversleep") {
-        needsNap = true;
-        napPriority = "yes";
+      if (sleepState === "shambles") {
+        // <4 hours: always needs nap (except during sleep time)
+        needsNap = !isSleepTime;
+        napPriority = needsNap ? "yes" : "none";
+      } else if (sleepState === "oversleep") {
+        // >9 hours: needs nap (might be sick) (except during sleep time)
+        needsNap = !isSleepTime;
+        napPriority = needsNap ? "yes" : "none";
       } else if (sleepState === "struggling" && isNapTime) {
+        // 4-6 hours during nap time: needs nap
         needsNap = true;
         napPriority = "maybe";
       }
     }
+
 
     const message = messageConfig.message;
     const configRecommendation = messageConfig.recommendation;
@@ -406,14 +415,25 @@ class NapCalculator {
    */
   static getMountainTimeInfo() {
     const now = new Date();
-    const mountainTimeString = now.toLocaleString("en-US", {
-      timeZone: "America/Denver",
-    });
-    const mountainTime = new Date(mountainTimeString);
+    const hour = parseInt(
+      now.toLocaleString("en-US", {
+        timeZone: "America/Denver",
+        hour: "2-digit",
+        hour12: false,
+      }),
+      10
+    );
+    const minute = parseInt(
+      now.toLocaleString("en-US", {
+        timeZone: "America/Denver",
+        minute: "2-digit",
+      }),
+      10
+    );
 
     return {
-      hour: mountainTime.getHours(),
-      minute: mountainTime.getMinutes(),
+      hour: hour,
+      minute: minute,
       formatted: now.toLocaleString("en-US", {
         timeZone: "America/Denver",
         timeStyle: "short",
@@ -421,8 +441,17 @@ class NapCalculator {
       fullFormatted: now.toLocaleString("en-US", {
         timeZone: "America/Denver",
       }),
-      isNapTime: this.getTimeWindow(mountainTime.getHours()) === "nap",
+      isNapTime: this.getTimeWindow(hour) === "nap",
     };
+  }
+
+  /**
+   * Check if it's currently nap time (2-5 PM Mountain Time)
+   * @returns {boolean} Whether it's nap time
+   */
+  static isCurrentlyNapTime() {
+    const timeInfo = this.getMountainTimeInfo();
+    return timeInfo.isNapTime;
   }
 
   /**

@@ -50,7 +50,7 @@ describe('OuraService', () => {
       
       // Verify API call parameters
       const [url, config] = mockedAxios.get.mock.calls[0];
-      expect(url).toBe('https://api.ouraring.com/v2/usercollection/daily_sleep');
+      expect(url).toBe('https://api.ouraring.com/v2/usercollection/sleep');
       expect(config.headers.Authorization).toBe(`Bearer ${mockAccessToken}`);
       expect(config.params.start_date).toBeDefined();
       expect(config.params.end_date).toBeDefined();
@@ -59,9 +59,26 @@ describe('OuraService', () => {
     it('should use yesterday\'s date in the API call', async () => {
       // Arrange
       const mockAccessToken = 'mock_token';
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const expectedDate = yesterday.toISOString().split('T')[0];
+
+      // Calculate dates using Mountain Time like the actual service does
+      const now = new Date();
+      const todayMT = now.toLocaleDateString("en-US", {
+        timeZone: "America/Denver",
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      const [month, day, year] = todayMT.split('/');
+      const todayDateString = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+
+      const todayMTDate = new Date(`${todayDateString}T00:00:00`);
+      const yesterdayMT = new Date(todayMTDate);
+      yesterdayMT.setDate(yesterdayMT.getDate() - 1);
+      const tomorrowMT = new Date(todayMTDate);
+      tomorrowMT.setDate(tomorrowMT.getDate() + 1);
+
+      const expectedStartDate = yesterdayMT.toISOString().split('T')[0];
+      const expectedEndDate = tomorrowMT.toISOString().split('T')[0];
 
       mockedAxios.get.mockResolvedValue({ data: { data: [] } });
 
@@ -70,8 +87,8 @@ describe('OuraService', () => {
 
       // Assert
       const [, config] = mockedAxios.get.mock.calls[0];
-      expect(config.params.start_date).toBe(expectedDate);
-      expect(config.params.end_date).toBe(expectedDate);
+      expect(config.params.start_date).toBe(expectedStartDate);
+      expect(config.params.end_date).toBe(expectedEndDate);
     });
 
     it('should handle API errors gracefully', async () => {

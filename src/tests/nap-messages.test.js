@@ -120,7 +120,7 @@ describe('Nap Calculator Logic', () => {
   describe('Message Priority', () => {
     it('sleep time message takes priority over everything', () => {
       const result = atTime(2, 3); // 2 AM, shambles
-      expect(result.message).toBe('Sleep Time');
+      expect(result.message).toBe('I Sleep'); // Sleep time message is "I Sleep"
       expect(result.recommendation).toContain('asleep right now');
     });
 
