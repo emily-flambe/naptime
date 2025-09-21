@@ -172,13 +172,6 @@ function App() {
 
                 <div className="data-status">
                   {napStatus.cached && <span className="cached-indicator">[Cached]</span>}
-                  <button
-                    onClick={() => fetchNapStatus(true)}
-                    className="refresh-btn"
-                    disabled={loadingNap}
-                  >
-                    {loadingNap ? 'Loading...' : 'Refresh'}
-                  </button>
                 </div>
 
                 {napStatus.message === "I Sleep" ? (
