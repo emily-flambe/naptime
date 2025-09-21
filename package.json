@@ -21,16 +21,21 @@
   },
   "devDependencies": {
     "jest": "^30.1.1",
+    "mockdate": "^3.0.5",
     "nodemon": "^3.1.10",
     "supertest": "^7.1.4"
   },
   "jest": {
     "testEnvironment": "node",
-    "testMatch": ["**/src/tests/**/*.test.js"],
+    "testMatch": [
+      "**/src/tests/**/*.test.js"
+    ],
     "collectCoverageFrom": [
       "src/**/*.js",
       "!src/tests/**"
     ],
-    "setupFilesAfterEnv": ["<rootDir>/src/tests/setup.js"]
+    "setupFilesAfterEnv": [
+      "<rootDir>/src/tests/setup.js"
+    ]
   }
 }

@@ -171,13 +171,13 @@ function App() {
                 </h1>
 
                 <div className="data-status">
-                  {napStatus.cached && <span className="cached-indicator">📦 Cached</span>}
+                  {napStatus.cached && <span className="cached-indicator">[Cached]</span>}
                   <button
                     onClick={() => fetchNapStatus(true)}
                     className="refresh-btn"
                     disabled={loadingNap}
                   >
-                    {loadingNap ? '⏳' : '🔄'} Refresh
+                    {loadingNap ? 'Loading...' : 'Refresh'}
                   </button>
                 </div>
 

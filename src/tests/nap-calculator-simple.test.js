@@ -4,16 +4,23 @@
  */
 
 const NapCalculator = require('../services/nap-calculator');
+const MockDate = require('mockdate');
 
 describe('NapCalculator - Basic Tests', () => {
+  afterEach(() => {
+    MockDate.reset();
+  });
+
   describe('calculateNapStatus', () => {
     it('should handle empty sleep data gracefully', () => {
+      // Mock 3 PM MT (nap time) - when no data, message is "Unknown"
+      MockDate.set('2024-07-15T21:00:00.000Z');
       const result = NapCalculator.calculateNapStatus({ data: [] });
       
       expect(result.sleepHours).toBe('0.0');
       expect(result.sleepScore).toBe(null);
       expect(result.needsNap).toBe(false); // No sleep data means no nap needed
-      expect(result.message).toBe('idk lol');
+      expect(result.message).toBe('Unknown'); // At nap time with no data
       expect(result.sleepCategory).toBe('no-data');
       expect(result.napPriority).toBe('unknown');
       expect(result.recommendation).toContain('Oura API is responding');
@@ -23,12 +30,14 @@ describe('NapCalculator - Basic Tests', () => {
     });
 
     it('should handle null sleep data', () => {
+      // Mock 3 PM MT (nap time)
+      MockDate.set('2024-07-15T21:00:00.000Z');
       const result = NapCalculator.calculateNapStatus(null);
       
       expect(result.sleepHours).toBe('0.0');
       expect(result.sleepScore).toBe(null);
       expect(result.needsNap).toBe(false);
-      expect(result.message).toBe('idk lol');
+      expect(result.message).toBe('Unknown'); // At nap time with no data
       expect(result.sleepCategory).toBe('no-data');
     });
 
